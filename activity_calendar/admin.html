@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบหลังบ้าน - ปฏิทินกิจกรรม</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Kanit', sans-serif; }
+        body { background-color: #f1f5f9; color: #334155; padding: 30px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h1 { color: #0284c7; margin-bottom: 20px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; }
+        th { background-color: #f8fafc; font-weight: 500; color: #475569; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; }
+        .btn-primary { background: #0284c7; color: white; }
+        .btn-primary:hover { background: #0369a1; }
+        .btn-success { background: #16a34a; color: white; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-warning { background: #facc15; color: #1e293b; }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-info { background: #0891b2; color: white; }
+        .btn-info:hover { background: #0e7490; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 400px; }
+        .modal-content h2 { margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-family: 'Kanit'; }
+        .actions { display: flex; gap: 10px; margin-top: 20px; }
+        .status-badge { padding: 4px 8px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-done { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fef9c3; color: #854d0e; }
+        .owner-badge { font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; margin-top: 4px; display: inline-block; }
+        
+        #login-section { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        #admin-section { display: none; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 15px; }
+            h1 { font-size: 20px; flex-direction: column; align-items: flex-start; gap: 15px; }
+            h1 div { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; }
+            .btn { flex: 1; min-width: 140px; text-align: center; }
+            .container { padding: 15px; }
+            .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 6px; }
+            table { margin-top: 0; min-width: 600px; }
+            .modal-content { width: 95% !important; padding: 20px !important; }
+            .actions { flex-direction: column; }
+            .actions button { width: 100%; }
+            #admin-section > div:first-of-type { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Section -->
+    <div id="login-section">
+        <h2 style="color: #0284c7; margin-bottom: 20px; text-align: center;">เข้าสู่ระบบ Admin</h2>
+        <div class="form-group">
+            <label>ชื่อผู้ใช้ (Username)</label>
+            <input type="text" id="login-user" placeholder="เช่น chemistry, physics, admin">
+        </div>
+        <div class="form-group">
+            <label>รหัสผ่าน (Password)</label>
+            <input type="password" id="login-pass">
+        </div>
+        <button class="btn btn-primary" style="width:100%; margin-top: 10px;" onclick="login()">เข้าสู่ระบบ</button>
+        <div id="login-error" style="color: red; margin-top: 10px; font-size: 14px; text-align: center;"></div>
+        <div style="margin-top: 15px; text-align: center;">
+            <a href="/" style="color: #64748b; font-size: 14px;">กลับไปหน้าปฏิทิน</a>
+        </div>
+    </div>
+
+    <!-- Admin Section -->
+    <div class="container" id="admin-section">
+        <h1>
+            จัดการกิจกรรม (หลังบ้าน)
+            <div>
+                <a href="/" class="btn btn-warning" style="text-decoration:none; margin-right:5px;">ดูหน้าปฏิทิน</a>
+                <button class="btn btn-info" id="manage-carousel-btn" style="display:none; margin-right:5px; color:white;" onclick="openCarouselModal()">จัดการรูปภาพสไลด์</button>
+                <button class="btn btn-secondary" id="manage-users-btn" style="display:none; margin-right:5px;" onclick="openUsersModal()">จัดการรหัสผ่านสาขา</button>
+                <button class="btn btn-secondary" style="margin-right:5px;" onclick="logout()">ออกจากระบบ</button>
+                <button class="btn btn-primary" onclick="openModal()">+ เพิ่มกิจกรรม</button>
+            </div>
+        </h1>
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="color: #64748b;">
+                เข้าสู่ระบบโดย: <strong id="user-display-name"></strong>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label style="font-size: 14px; font-weight: 500;">กรองตามสาขา/คณะ:</label>
+                <select id="admin-branch-filter" onchange="renderTable()" style="padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1; font-family: 'Kanit';">
+                    <option value="all">แสดงทั้งหมด</option>
+                    <option value="คณะวิทยาศาสตร์และเทคโนโลยี">คณะวิทยาศาสตร์และเทคโนโลยี</option>
+                    <option value="สโมสรนักศึกษา">สโมสรนักศึกษา</option>
+                    <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
+                    <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
+                    <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
+                    <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
+                    <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
+                    <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
+                    <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
+                    <option value="สาขาวิชาเทคโนโลยีคอมพิวเตอร์และดิจิทัล">สาขาวิชาเทคโนโลยีคอมพิวเตอร์และดิจิทัล</option>
+                    <option value="สาขาวิชาวิทยาการข้อมูล">สาขาวิชาวิทยาการข้อมูล</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Quick Guide for All Users -->
+        <div style="background: #fffbeb; border: 1px solid #fef3c7; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; color: #92400e;">
+            <div style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-circle-info"></i> วิธีการใช้งานระบบหลังบ้านแบบย่อสำหรับทุกสาขา:
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div style="line-height: 1.5;">
+                    <strong>1. เพิ่มกิจกรรม:</strong><br>
+                    กดปุ่มสีน้ำเงินด้านบน <strong>"+ เพิ่มกิจกรรม"</strong> เพื่อสร้างรายการใหม่
+                </div>
+                <div style="line-height: 1.5;">
+                    <strong>2. การใส่วันที่:</strong><br>
+                    พิมพ์วันที่ลงไปตรงๆ หรือใช้ปุ่ม <strong>"ทางลัดวันที่"</strong> ในหน้าต่างเพื่อให้ระบบกรอกให้
+                </div>
+                <div style="line-height: 1.5;">
+                    <strong>3. สิทธิ์การจัดการ:</strong><br>
+                    คุณสามารถ <strong>แก้ไข/ลบ</strong> ได้เฉพาะกิจกรรมที่สาขาของคุณเป็นเจ้าของเท่านั้น
+                </div>
+                <div style="line-height: 1.5;">
+                    <strong>4. อัปเดตสถานะ:</strong><br>
+                    เมื่อกิจกรรมเสร็จสิ้น ให้กดแก้ไขแล้วเปลี่ยนสถานะเป็น <strong>"ดำเนินการเสร็จสิ้น"</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table id="events-table">
+                <thead>
+                    <tr>
+                        <th width="15%">วันที่</th>
+                        <th width="50%">ชื่อกิจกรรม</th>
+                        <th width="15%">สถานะ</th>
+                        <th width="20%">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Events will be injected here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal for Add/Edit -->
+    <div class="modal" id="event-modal">
+        <div class="modal-content">
+            <h2 id="modal-title">เพิ่มกิจกรรมใหม่</h2>
+            <input type="hidden" id="event-id">
+            <div class="form-group">
+                <label>วันที่ (พิมพ์ระบุเอง หรือเลือกจากปฏิทินด้านขวา)</label>
+                <div style="display:flex; gap:10px; align-items:flex-end;">
+                    <input type="text" id="event-date" placeholder="เช่น: 24 ม.ค. 69" style="flex:2;">
+                    <div style="flex:1;">
+                        <span style="font-size:11px; color:#64748b; display:block; margin-bottom:2px;">วันเริ่ม</span>
+                        <input type="date" id="date-helper1" onchange="updateDateText()" style="padding:6px; font-size:13px; width:100%;">
+                    </div>
+                    <div style="flex:1;">
+                        <span style="font-size:11px; color:#64748b; display:block; margin-bottom:2px;">วันสิ้นสุด (ถ้ามี)</span>
+                        <input type="date" id="date-helper2" onchange="updateDateText()" style="padding:6px; font-size:13px; width:100%;">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>ชื่อกิจกรรม</label>
+                <input type="text" id="event-title" placeholder="ระบุชื่อกิจกรรม">
+            </div>
+            <div class="form-group">
+                <label>สถานะ</label>
+                <select id="event-status">
+                    <option value="รอการดำเนินการ">รอการดำเนินการ</option>
+                    <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                </select>
+            </div>
+            <div class="form-group" id="owner-group" style="display:none;">
+                <label>สาขาเจ้าของกิจกรรม (เฉพาะสโมสรเปลี่ยนได้)</label>
+                <select id="event-owner">
+                    <option value="คณะวิทยาศาสตร์และเทคโนโลยี">คณะวิทยาศาสตร์และเทคโนโลยี</option>
+                    <option value="สโมสรนักศึกษา">สโมสรนักศึกษา</option>
+                    <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
+                    <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
+                    <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
+                    <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
+                    <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
+                    <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
+                    <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
+                    <option value="สาขาวิชาเทคโนโลยีคอมพิวเตอร์และดิจิทัล">สาขาวิชาเทคโนโลยีคอมพิวเตอร์และดิจิทัล</option>
+                    <option value="สาขาวิชาวิทยาการข้อมูล">สาขาวิชาวิทยาการข้อมูล</option>
+                </select>
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary" style="flex:1;" onclick="saveEvent()">บันทึก</button>
+                <button class="btn btn-danger" style="flex:1;" onclick="closeModal()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management Modal -->
+    <div id="users-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2 style="margin-bottom:20px;">จัดการรหัสผ่านสาขา</h2>
+            <div id="users-list-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; background: #f8fafc; border-radius: 8px; padding: 10px;">
+                <!-- User list will be injected here -->
+            </div>
+            <div class="actions">
+                <button class="btn btn-danger" style="width:100%;" onclick="closeUsersModal()">ปิดหน้าต่างนี้</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carousel Management Modal -->
+    <div id="carousel-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px; width: 90%;">
+            <h2 style="margin-bottom:10px;">จัดการรูปภาพสไลด์</h2>
+            
+            <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #0369a1;">
+                <strong>💡 วิธีใช้งานแบบย่อ:</strong><br>
+                1. กดปุ่ม <strong>"เลือกไฟล์รูปภาพ"</strong> เพื่ออัปโหลดรูปจากเครื่อง<br>
+                2. ขนาดที่แนะนำคือ <strong>560 x 280 พิกเซล</strong> (แนวนอน 2:1)<br>
+                3. รูปจะถูกเพิ่มเข้าสไลด์โดยอัตโนมัติ<br>
+                4. คุณสามารถกดลบรูปที่ไม่ต้องการออกได้จากรายการด้านล่าง
+            </div>
+
+            <div style="margin-bottom: 20px; border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px;">
+                <input type="file" id="carousel-file-input" accept="image/*" style="display: none;" onchange="handleFileUpload(this)">
+                <button class="btn btn-primary" onclick="document.getElementById('carousel-file-input').click()">
+                    <i class="fa-solid fa-upload"></i> เลือกไฟล์รูปภาพเพื่ออัปโหลด
+                </button>
+                <div id="upload-status" style="margin-top:10px; font-size: 12px;"></div>
+            </div>
+
+            <h4 style="margin-bottom: 10px; font-size: 14px;">รูปภาพปัจจุบันในสไลด์:</h4>
+            <div id="carousel-list-container" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px; background: #f8fafc; border-radius: 8px; padding: 10px;">
+                <!-- List of images -->
+            </div>
+            
+            <div class="actions">
+                <button class="btn btn-danger" style="width:100%;" onclick="closeCarouselModal()">ปิดหน้าต่างนี้</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let events = [];
+        let currentUser = null;
+        const thaiMonthsAbbr = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+        function updateDateText() {
+            const d1 = document.getElementById('date-helper1').value;
+            const d2 = document.getElementById('date-helper2').value;
+            if (!d1 && !d2) return;
+            
+            let text = '';
+            if (d1 && !d2) {
+                let date1 = new Date(d1);
+                text = `${date1.getDate()} ${thaiMonthsAbbr[date1.getMonth()]} ${(date1.getFullYear() + 543) % 100}`;
+            } else if (d1 && d2) {
+                let date1 = new Date(d1);
+                let date2 = new Date(d2);
+                let m1 = thaiMonthsAbbr[date1.getMonth()];
+                let m2 = thaiMonthsAbbr[date2.getMonth()];
+                let y1 = (date1.getFullYear() + 543) % 100;
+                let y2 = (date2.getFullYear() + 543) % 100;
+                
+                if (m1 === m2 && y1 === y2) {
+                    text = `${date1.getDate()}-${date2.getDate()} ${m1} ${y1}`;
+                } else if (y1 === y2) {
+                    text = `${date1.getDate()} ${m1} - ${date2.getDate()} ${m2} ${y1}`;
+                } else {
+                    text = `${date1.getDate()} ${m1} ${y1} - ${date2.getDate()} ${m2} ${y2}`;
+                }
+            }
+            if (text) document.getElementById('event-date').value = text;
+        }
+
+        async function checkLogin() {
+            const res = await fetch('/api/me');
+            if (res.ok) {
+                const data = await res.json();
+                currentUser = data.user;
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('admin-section').style.display = 'block';
+                document.getElementById('user-display-name').textContent = currentUser.name;
+                
+                // Show manage buttons if admin
+                if (currentUser.role === 'admin') {
+                    document.getElementById('manage-users-btn').style.display = 'inline-block';
+                    document.getElementById('manage-carousel-btn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('manage-users-btn').style.display = 'none';
+                    document.getElementById('manage-carousel-btn').style.display = 'none';
+                }
+
+                fetchEvents();
+            } else {
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('admin-section').style.display = 'none';
+            }
+        }
+
+        async function login() {
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            const err = document.getElementById('login-error');
+            
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                err.textContent = '';
+                checkLogin();
+            } else {
+                err.textContent = data.message;
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', {method: 'POST'});
+            currentUser = null;
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+            checkLogin();
+        }
+
+        async function fetchEvents() {
+            const res = await fetch('/api/events');
+            events = await res.json();
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.querySelector('#events-table tbody');
+            tbody.innerHTML = '';
+            
+            const filterValue = document.getElementById('admin-branch-filter').value;
+            
+            events.forEach(e => {
+                let ownerStr = e.owner || 'สโมสรนักศึกษา';
+                
+                // Branch filter logic
+                if (filterValue !== 'all' && ownerStr !== filterValue) return;
+
+                let statusClass = e.status === 'เสร็จสิ้น' ? 'status-done' : 'status-pending';
+                
+                // Permission check
+                let canEdit = currentUser.role === 'admin' || currentUser.name === ownerStr;
+                let actionHtml = '';
+                if (canEdit) {
+                    actionHtml = `
+                        <button class="btn btn-success" style="padding:4px 8px; font-size:12px;" onclick="openModal('${e.id}')">แก้ไข</button>
+                        <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteEvent('${e.id}')">ลบ</button>
+                    `;
+                } else {
+                    actionHtml = `<span style="font-size:12px; color:#94a3b8;">ไม่มีสิทธิ์</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${e.date}</td>
+                        <td>
+                            ${e.title}<br>
+                            <span class="owner-badge">${ownerStr}</span>
+                        </td>
+                        <td><span class="status-badge ${statusClass}">${e.status || 'รอการดำเนินการ'}</span></td>
+                        <td>${actionHtml}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openModal(id = null) {
+            const modal = document.getElementById('event-modal');
+            const titleEl = document.getElementById('modal-title');
+            
+            // Show owner select if admin
+            if (currentUser.role === 'admin') {
+                document.getElementById('owner-group').style.display = 'block';
+            } else {
+                document.getElementById('owner-group').style.display = 'none';
+            }
+            
+            if (id) {
+                titleEl.textContent = 'แก้ไขกิจกรรม';
+                const event = events.find(e => e.id === id);
+                document.getElementById('event-id').value = event.id;
+                document.getElementById('event-date').value = event.date;
+                document.getElementById('event-title').value = event.title;
+                document.getElementById('event-status').value = event.status || 'รอการดำเนินการ';
+                document.getElementById('event-owner').value = event.owner || 'สโมสรนักศึกษา';
+            } else {
+                titleEl.textContent = 'เพิ่มกิจกรรมใหม่';
+                document.getElementById('event-id').value = '';
+                document.getElementById('event-date').value = '';
+                document.getElementById('event-title').value = '';
+                document.getElementById('event-status').value = 'รอการดำเนินการ';
+                document.getElementById('event-owner').value = currentUser.name;
+            }
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('event-modal').classList.remove('active');
+        }
+
+        async function saveEvent() {
+            const id = document.getElementById('event-id').value;
+            const payload = {
+                date: document.getElementById('event-date').value,
+                title: document.getElementById('event-title').value,
+                status: document.getElementById('event-status').value
+            };
+
+            if (currentUser.role === 'admin') {
+                payload.owner = document.getElementById('event-owner').value;
+            }
+
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? '/api/events/' + id : '/api/events';
+
+            if(id) payload.id = id;
+
+            await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            closeModal();
+            fetchEvents();
+        }
+
+        async function deleteEvent(id) {
+            if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบกิจกรรมนี้?')) {
+                await fetch('/api/events/' + id, { method: 'DELETE' });
+                fetchEvents();
+            }
+        }
+
+        async function openUsersModal() {
+            const res = await fetch('/api/admin/users');
+            const users = await res.json();
+            const container = document.getElementById('users-list-container');
+            container.innerHTML = '';
+            
+            Object.keys(users).forEach(username => {
+                const user = users[username];
+                if (username === 'admin') return; // Don't manage self here for safety
+                
+                const div = document.createElement('div');
+                div.style = 'background: white; padding: 15px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;';
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight: 600; color: #1e293b;">${user.name}</div>
+                        <div style="font-size: 12px; color: #64748b;">Username: ${username}</div>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="pass-${username}" value="${user.password}" style="padding: 4px 8px; font-size: 13px; width: 120px;">
+                        <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px;" onclick="changePassword('${username}')">บันทึก</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            
+            document.getElementById('users-modal').classList.add('active');
+        }
+
+        function closeUsersModal() {
+            document.getElementById('users-modal').classList.remove('active');
+        }
+
+        async function changePassword(username) {
+            const newPass = document.getElementById(`pass-${username}`).value;
+            const res = await fetch('/api/admin/change-password', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: username, password: newPass})
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message);
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + data.message);
+            }
+        }
+
+        async function openCarouselModal() {
+            const res = await fetch('/api/carousel');
+            const images = await res.json();
+            renderCarouselList(images);
+            document.getElementById('carousel-modal').classList.add('active');
+        }
+
+        function renderCarouselList(images) {
+            const container = document.getElementById('carousel-list-container');
+            container.innerHTML = '';
+            
+            images.forEach((url, index) => {
+                const div = document.createElement('div');
+                div.style = 'display: flex; gap: 10px; margin-bottom: 10px; background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; align-items: center;';
+                div.innerHTML = `
+                    <img src="${url}" style="width: 80px; height: 40px; object-fit: cover; border-radius: 4px;">
+                    <div style="flex:1; font-size: 11px; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${url}</div>
+                    <button class="btn btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteCarouselImage(${index})">ลบ</button>
+                `;
+                container.appendChild(div);
+            });
+            
+            if (images.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding: 20px; color: #94a3b8; font-size: 13px;">ยังไม่มีรูปภาพในสไลด์</div>';
+            }
+        }
+
+        async function handleFileUpload(input) {
+            if (!input.files || input.files.length === 0) return;
+            
+            const file = input.files[0];
+            const status = document.getElementById('upload-status');
+            status.textContent = 'กำลังอัปโหลด...';
+            status.style.color = '#0284c7';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const res = await fetch('/api/admin/upload-carousel', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    status.textContent = 'อัปโหลดสำเร็จ!';
+                    status.style.color = '#16a34a';
+                    // Refresh list
+                    const res2 = await fetch('/api/carousel');
+                    const images = await res2.json();
+                    renderCarouselList(images);
+                } else {
+                    status.textContent = 'ล้มเหลว: ' + data.message;
+                    status.style.color = '#dc2626';
+                }
+            } catch (e) {
+                status.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+                status.style.color = '#dc2626';
+            }
+            
+            input.value = ''; // Reset
+        }
+
+        async function deleteCarouselImage(index) {
+            if (!confirm('ยืนยันการลบรูปภาพนี้ออกจากสไลด์?')) return;
+            
+            const res = await fetch('/api/carousel');
+            let images = await res.json();
+            images.splice(index, 1);
+            
+            const res2 = await fetch('/api/admin/carousel', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({images: images})
+            });
+            
+            if (res2.ok) {
+                renderCarouselList(images);
+            } else {
+                alert('เกิดข้อผิดพลาดในการลบ');
+            }
+        }
+
+        function closeCarouselModal() {
+            document.getElementById('carousel-modal').classList.remove('active');
+        }
+
+        // Init check
+        checkLogin();
+    </script>
+</body>
+</html>

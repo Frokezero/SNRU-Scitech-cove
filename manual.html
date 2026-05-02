@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือการใช้งานระบบปฏิทินกิจกรรมฉบับละเอียด - University Activity System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #facc15;
+            --primary-dark: #eab308;
+            --secondary: #1e293b;
+            --accent: #0284c7;
+            --text: #334155;
+            --bg: #f1f5f9;
+        }
+        body {
+            font-family: 'Kanit', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+        .no-print-bar {
+            background: var(--secondary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: white;
+            padding: 80px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+            border-radius: 0px; /* Traditional PDF look */
+        }
+        header {
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+            padding-bottom: 40px;
+            margin-bottom: 50px;
+        }
+        .logo-placeholder {
+            width: 80px;
+            height: 80px;
+            background: var(--primary);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: var(--secondary);
+            font-size: 40px;
+        }
+        h1 { font-size: 36px; margin: 0; color: var(--secondary); }
+        h2 { 
+            font-size: 26px; 
+            color: var(--accent); 
+            margin-top: 50px; 
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        h3 { 
+            font-size: 20px; 
+            color: var(--secondary); 
+            margin-top: 30px; 
+            background: #f8fafc;
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+        .guide-box {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+        .guide-box:hover {
+            border-color: var(--primary);
+            background: #fffdf5;
+        }
+        .step-num {
+            width: 50px;
+            height: 50px;
+            background: var(--secondary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+        }
+        .info-card {
+            background: #e0f2fe;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 6px solid var(--accent);
+        }
+        .warning-card {
+            background: #fee2e2;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 6px solid #dc2626;
+        }
+        .table-responsive { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 15px;
+            text-align: left;
+        }
+        th { background: #f1f5f9; font-weight: 700; }
+        .highlight { color: #dc2626; font-weight: 700; }
+        
+        .print-btn {
+            background: var(--primary);
+            color: var(--secondary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: 'Kanit', sans-serif;
+        }
+        @media (max-width: 768px) {
+            .no-print-bar { flex-direction: column; gap: 10px; }
+            .container { padding: 30px 15px; margin: 0; }
+            h1 { font-size: 28px; }
+            .guide-box { grid-template-columns: 1fr; text-align: center; }
+            .step-num { margin: 0 auto; }
+        }
+        @media print {
+            .no-print-bar { display: none; }
+            .container { margin: 0; box-shadow: none; padding: 40px; }
+            body { background: white; }
+            h2 { page-break-before: always; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print-bar">
+        <span><i class="fa-solid fa-file-pdf"></i> คู่มือนี้ออกแบบมาเพื่อการบันทึกเป็น PDF</span>
+        <button class="print-btn" onclick="window.print()">กดปุ่มนี้เพื่อบันทึกเป็น PDF</button>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="logo-placeholder"><i class="fa-solid fa-graduation-cap"></i></div>
+            <h1>คู่มือการใช้งานระบบปฏิทินกิจกรรม</h1>
+            <p style="font-size: 20px; color: #64748b;">(University Activity & Portfolio Management System)</p>
+            <p>เวอร์ชัน 1.0 | สำหรับนักศึกษาและบุคลากร คณะวิทยาศาสตร์และเทคโนโลยี</p>
+        </header>
+
+        <section>
+            <h2><i class="fa-solid fa-rocket"></i> บทนำและภาพรวมระบบ</h2>
+            <p>ระบบปฏิทินกิจกรรมถูกออกแบบมาเพื่อเป็นศูนย์กลางในการแจ้งข่าวสารกิจกรรมของมหาวิทยาลัยและคณะ โดยเน้นการมีส่วนร่วมของนักศึกษาผ่านระบบ **Gamification** (สะสมคะแนนและอันดับ Leaderboard) เพื่อกระตุ้นให้นักศึกษาทำกิจกรรมครบตามหลักสูตรอย่างมีประสิทธิภาพ</p>
+            
+            <div class="info-card">
+                <strong><i class="fa-solid fa-lightbulb"></i> จุดเด่นของระบบ:</strong>
+                <ul>
+                    <li>รองรับผู้ใช้งานพร้อมกันได้มากกว่า 1,000 คน ด้วยเทคโนโลยี Waitress Server</li>
+                    <li>ระบบตรวจสอบผลงานแยกตามสาขาวิชา (Decentralized Approval)</li>
+                    <li>การแสดงผลแบบ Responsive รองรับทั้งมือถือ แท็บเล็ต และคอมพิวเตอร์</li>
+                    <li>ระบบความปลอดภัยข้อมูลด้วยการเข้ารหัสรหัสผ่านมาตรฐานสูงสุด</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <h2><i class="fa-solid fa-user-graduate"></i> คู่มือสำหรับนักศึกษา (Student Guide)</h2>
+            
+            <h3>ขั้นตอนที่ 1: การสมัครสมาชิกและเข้าสู่ระบบ</h3>
+            <div class="guide-box">
+                <div class="step-num">01</div>
+                <div>
+                    <strong>เข้าหน้าเว็บและกด "ลงทะเบียน":</strong> กรอกรหัสประจำตัวนักศึกษาเป็น Username, ตั้งรหัสผ่าน, และที่สำคัญที่สุดคือ <span class="highlight">เลือกสาขาวิชาให้ตรงตามจริง</span> เพื่อให้คะแนนของท่านถูกคำนวณในกลุ่มสาขาที่ถูกต้อง
+                </div>
+            </div>
+
+            <h3>ขั้นตอนที่ 2: การสำรวจกิจกรรม</h3>
+            <div class="guide-box">
+                <div class="step-num">02</div>
+                <div>
+                    <strong>ใช้เครื่องมือกรองข้อมูล:</strong> ท่านสามารถเลือกดู "กิจกรรมตามเดือน" หรือ "กิจกรรมของมหาวิทยาลัย/คณะ" ผ่านปุ่มตัวเลือกด้านบน กิจกรรมที่ระบุว่า "กิจกรรมมหาวิทยาลัย" จะเป็นกิจกรรมส่วนกลางที่นักศึกษาทุกคนควรเข้าร่วม
+                </div>
+            </div>
+
+            <h3>ขั้นตอนที่ 3: การส่งหลักฐาน (Portfolio)</h3>
+            <div class="guide-box">
+                <div class="step-num">03</div>
+                <div>
+                    <strong>อัปโหลดรูปภาพ:</strong> เมื่อเข้าร่วมกิจกรรมแล้ว ให้กดที่กิจกรรมนั้นและกดปุ่ม <span style="color:var(--accent)">"อัปโหลดรูป"</span> เลือกรูปถ่ายขณะทำกิจกรรม และกดบันทึก สถานะจะเปลี่ยนเป็น "รอการตรวจสอบ"
+                </div>
+            </div>
+
+            <div class="warning-card">
+                <strong><i class="fa-solid fa-triangle-exclamation"></i> ข้อควรระวัง:</strong>
+                ภาพถ่ายหลักฐานต้องมีความชัดเจนและเห็นหน้าของนักศึกษา หรือเป็นภาพประกาศนียบัตรที่ระบุชื่อชัดเจน เพื่อให้แอดมินสาขาสามารถอนุมัติคะแนนได้รวดเร็ว
+            </div>
+        </section>
+
+        <section>
+            <h2><i class="fa-solid fa-user-shield"></i> คู่มือสำหรับแอดมินสาขา (Major Admin Guide)</h2>
+            <p>ผู้ดูแลระดับสาขามีหน้าที่หลักในการกลั่นกรองข้อมูลและอนุมัติคะแนนให้นักศึกษาในสังกัด</p>
+
+            <h3>การจัดการผลงานนักศึกษา</h3>
+            <div class="guide-box">
+                <div class="step-num">A</div>
+                <div>
+                    <strong>การคัดกรอง:</strong> ใช้ปุ่ม "กรองสถานะ" (ทั้งหมด / อัปโหลดแล้ว / ยังไม่ได้อัปโหลด) เพื่อเลือกดูเฉพาะนักศึกษาที่ส่งงานมาใหม่
+                </div>
+            </div>
+            <div class="guide-box">
+                <div class="step-num">B</div>
+                <div>
+                    <strong>การให้คะแนน:</strong> กดดูรูปหลักฐาน หากถูกต้อง ให้กรอกคะแนนในช่องคะแนน (Score) และเปลี่ยนสถานะเป็น <span style="color:green">"อนุมัติ/เสร็จสิ้น"</span> แล้วกดปุ่มบันทึก
+                </div>
+            </div>
+
+            <h3>รายงานการเข้าร่วมกิจกรรม (Participation Report)</h3>
+            <p>ฟังก์ชันใหม่สำหรับตรวจสอบประวัตินักศึกษาอย่างละเอียด:</p>
+            <div class="guide-box">
+                <div class="step-num">C</div>
+                <div>
+                    <strong>ตรวจสอบรายบุคคล:</strong> กดปุ่ม <span style="color:#0ea5e9">"รายงานรายบุคคล"</span> เพื่อดูรายชื่อนักศึกษาทั้งหมดในสาขา พร้อมจำนวนกิจกรรมที่เข้าร่วมและคะแนนรวม
+                </div>
+            </div>
+            <div class="guide-box">
+                <div class="step-num">D</div>
+                <div>
+                    <strong>ดูประวัติเชิงลึก:</strong> กดปุ่ม <span style="color:white; background:#0284c7; padding:2px 5px; border-radius:4px;">"ดูประวัติ"</span> ท้ายชื่อนักศึกษาเพื่อตรวจสอบว่านักศึกษาคนนั้นๆ เคยเข้าร่วมกิจกรรมใดบ้างที่ได้รับการอนุมัติแล้ว
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <h3>ตารางบัญชีผู้ดูแลระบบ (Reference)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>สาขาวิชา / หน่วยงาน</th>
+                            <th>รหัสผ่านเริ่มต้น</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>admin</td><td>แอดมินส่วนกลาง (ดูแลทุกส่วน)</td><td>admin</td></tr>
+                        <tr><td>major_sci</td><td>คณะวิทยาศาสตร์และเทคโนโลยี</td><td>password</td></tr>
+                        <tr><td>smo</td><td>สโมสรนักศึกษา</td><td>password</td></tr>
+                        <tr><td>chem</td><td>สาขาวิชาเคมี</td><td>password</td></tr>
+                        <tr><td>phys</td><td>สาขาวิชาฟิสิกส์</td><td>password</td></tr>
+                        <tr><td>bio</td><td>สาขาวิชาชีววิทยา</td><td>password</td></tr>
+                        <tr><td>math</td><td>สาขาวิชาคณิตศาสตร์</td><td>password</td></tr>
+                        <tr><td>stat</td><td>สาขาวิชาสถิติ</td><td>password</td></tr>
+                        <tr><td>cs</td><td>สาขาวิชาวิทยาการคอมพิวเตอร์</td><td>password</td></tr>
+                        <tr><td>it</td><td>สาขาวิชาเทคโนโลยีสารสนเทศ</td><td>password</td></tr>
+                        <tr><td>env</td><td>สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</td><td>password</td></tr>
+                        <tr><td>he</td><td>สาขาวิชาคหกรรมศาสตร์</td><td>password</td></tr>
+                        <tr><td>ph</td><td>สาขาวิชาสาธารณสุขศาสตร์</td><td>password</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <h2><i class="fa-solid fa-circle-question"></i> คำถามที่พบบ่อย (FAQ)</h2>
+            <p><strong>Q: ลืมรหัสผ่านต้องทำอย่างไร?</strong><br>A: ให้นักศึกษาติดต่อแอดมินส่วนกลาง (บัญชี admin) เพื่อทำการรีเซ็ตรหัสผ่านใหม่</p>
+            <p><strong>Q: คะแนนไม่ขึ้น Leaderboard?</strong><br>A: คะแนนจะอัปเดตทันทีหลังจากแอดมินสาขาทำการ "อนุมัติ" ผลงานในหน้าจัดการแล้วเท่านั้น</p>
+            <p><strong>Q: ระบบรองรับไฟล์ภาพประเภทใดบ้าง?</strong><br>A: รองรับไฟล์ภาพมาตรฐานทั่วไป (.jpg, .png, .webp) แนะนำขนาดไม่เกิน 2MB ต่อรูป</p>
+        </section>
+
+        <footer style="margin-top: 100px; border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; color: #64748b;">
+            <p>จัดทำโดย ระบบบริหารจัดการกิจกรรมนักศึกษา คณะวิทยาศาสตร์และเทคโนโลยี</p>
+            <p>มหาวิทยาลัยราชภัฏสกลนคร (SNRU) © 2026</p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ปฏิทินกิจกรรมนักศึกษา 2569</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="notebook">
+        <header class="notebook-header">
+            <div class="binding-area" id="binding-area">
+                <!-- JS will inject rings -->
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+                <div>
+                    <div class="header-title">
+                        <h1>ปฏิทิน</h1>
+                        <h2>กิจกรรมนักศึกษา</h2>
+                        <div class="year">2569</div>
+                    </div>
+                    <div class="header-subtitle">
+                        คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏสกลนคร
+                    </div>
+                </div>
+                
+                <div class="carousel-container" id="carousel-container">
+                    <div class="carousel-track" id="carousel-track">
+                        <!-- JS will inject images -->
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="filter-section">
+            <div class="filter-label"><i class="fa-solid fa-calendar-days"></i> เลือกเดือน:</div>
+            <div class="month-filters" id="month-filters">
+                <!-- JS will inject month buttons dynamically -->
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-label"><i class="fa-solid fa-graduation-cap"></i> เลือกสาขา/คณะ:</div>
+            <div class="branch-filters" id="branch-filters">
+                <!-- JS will inject branch buttons dynamically -->
+            </div>
+        </div>
+
+        <main class="cards-container" id="cards-container">
+            <!-- JS will inject cards here -->
+        </main>
+
+        <footer class="footer-bar">
+            Faculty of Science and Technology, Sakon Nakhon Rajabhat University
+            <div style="margin-top:5px; font-size:12px;">
+                <a href="/admin" style="color:white; text-decoration:underline;">เข้าสู่ระบบจัดการ (Admin)</a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

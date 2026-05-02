@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - ปฏิทินกิจกรรม</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Kanit', sans-serif;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-container h2 {
+            color: #0284c7;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #475569;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-family: 'Kanit', sans-serif;
+            font-size: 15px;
+            box-sizing: border-box;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Kanit', sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .btn-primary {
+            background: #0284c7;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0369a1;
+        }
+        .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #15803d;
+        }
+        .switch-mode {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .switch-mode a {
+            color: #0284c7;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 30px;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        #auth-error {
+            color: #dc2626;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+        @media (max-width: 480px) {
+            .login-container { padding: 25px; border-radius: 0; box-shadow: none; }
+            #register-form > div[style*="display: flex"] { flex-direction: column !important; gap: 0 !important; }
+            #register-form .form-group { margin-bottom: 15px !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <!-- Login Form -->
+        <div id="login-form">
+            <h2 id="auth-title">เข้าสู่ระบบ</h2>
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="login-username" placeholder="กรอก Username">
+            </div>
+            <div class="form-group">
+                <label>รหัสผ่าน</label>
+                <input type="password" id="login-password" placeholder="กรอกรหัสผ่าน">
+            </div>
+            <button class="btn btn-primary" onclick="doLogin()">เข้าสู่ระบบ</button>
+            
+            <div class="switch-mode">
+                นักศึกษาใหม่? <a onclick="switchAuthMode('register')">สมัครสมาชิก</a>
+            </div>
+        </div>
+
+        <!-- Register Form -->
+        <div id="register-form" style="display: none;">
+            <h2 id="auth-title">สมัครสมาชิก</h2>
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>ชื่อ</label>
+                    <input type="text" id="reg-firstname" placeholder="ชื่อจริง">
+                </div>
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label>นามสกุล</label>
+                    <input type="text" id="reg-lastname" placeholder="นามสกุลจริง">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>รหัสนักศึกษา</label>
+                <input type="text" id="reg-username" placeholder="ใช้เป็น Username ในการเข้าสู่ระบบ">
+            </div>
+            <div class="form-group">
+                <label>อีเมล (Email)</label>
+                <input type="email" id="reg-email" placeholder="ตัวอย่าง: student@email.com">
+            </div>
+            <div class="form-group">
+                <label>สาขาวิชา</label>
+                <select id="reg-major" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Kanit', sans-serif; font-size: 15px; background: white;">
+                    <option value="">-- เลือกสาขาวิชา --</option>
+                    <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
+                    <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
+                    <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
+                    <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
+                    <option value="สาขาวิชาสถิติ">สาขาวิชาสถิติ</option>
+                    <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
+                    <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ</option>
+                    <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
+                    <option value="สาขาวิชาคหกรรมศาสตร์">สาขาวิชาคหกรรมศาสตร์</option>
+                    <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>รหัสผ่าน</label>
+                <input type="password" id="reg-password" placeholder="ตั้งรหัสผ่าน">
+            </div>
+            <button class="btn btn-success" onclick="doRegister()">ยืนยันสมัครสมาชิก</button>
+            
+            <div class="switch-mode">
+                มีบัญชีอยู่แล้ว? <a onclick="switchAuthMode('login')">กลับไปเข้าสู่ระบบ</a>
+            </div>
+        </div>
+
+        <div id="auth-error"></div>
+        
+        <a href="/" class="back-link">← กลับไปหน้าปฏิทิน (บุคคลทั่วไป)</a>
+    </div>
+
+    <script>
+        function switchAuthMode(mode) {
+            document.getElementById('auth-error').textContent = '';
+            if (mode === 'login') {
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('register-form').style.display = 'none';
+            } else {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('register-form').style.display = 'block';
+            }
+        }
+
+        async function doLogin() {
+            const u = document.getElementById('login-username').value;
+            const p = document.getElementById('login-password').value;
+            const err = document.getElementById('auth-error');
+            err.textContent = 'กำลังตรวจสอบ...';
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: u, password: p})
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    err.style.color = '#16a34a';
+                    err.textContent = 'เข้าสู่ระบบสำเร็จ กำลังพาไปหน้าหลัก...';
+                    setTimeout(() => {
+                        if (data.user && (data.user.role === 'admin' || data.user.role === 'major')) {
+                            window.location.href = '/admin';
+                        } else {
+                            window.location.href = '/';
+                        }
+                    }, 500);
+                } else {
+                    err.style.color = '#dc2626';
+                    err.textContent = data.message || 'รหัสผ่านไม่ถูกต้อง';
+                }
+            } catch(e) {
+                err.style.color = '#dc2626';
+                err.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+            }
+        }
+
+        async function doRegister() {
+            const fname = document.getElementById('reg-firstname').value.trim();
+            const lname = document.getElementById('reg-lastname').value.trim();
+            const u = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const m = document.getElementById('reg-major').value;
+            const p = document.getElementById('reg-password').value;
+            const err = document.getElementById('auth-error');
+            
+            if (!fname || !lname || !u || !email || !p || !m) {
+                err.style.color = '#dc2626';
+                err.textContent = 'กรุณากรอกข้อมูลให้ครบถ้วน';
+                return;
+            }
+            
+            // Basic email validation
+            if (!email.includes('@')) {
+                err.style.color = '#dc2626';
+                err.textContent = 'กรุณากรอกรูปแบบอีเมลให้ถูกต้อง';
+                return;
+            }
+            
+            const n = fname + ' ' + lname;
+            
+            err.textContent = 'กำลังสมัครสมาชิก (อาจใช้เวลาสักครู่ในการส่งอีเมล)...';
+            err.style.color = '#0284c7';
+            
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name: n, username: u, email: email, major: m, password: p})
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    err.style.color = '#16a34a';
+                    err.textContent = 'สมัครสมาชิกสำเร็จ! กำลังพาไปหน้าหลัก...';
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    err.style.color = '#dc2626';
+                    err.textContent = data.message || 'ไม่สามารถสมัครสมาชิกได้';
+                }
+            } catch(e) {
+                err.style.color = '#dc2626';
+                err.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+            }
+        }
+        
+        // Check if already logged in and redirect
+        fetch('/api/me').then(res => res.json()).then(data => {
+            if (data.success) {
+                if (data.user.role === 'admin' || data.user.role === 'major') {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/';
+                }
+            }
+        }).catch(e => {});
+        
+        // Listen to enter key
+        document.getElementById('login-password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') doLogin();
+        });
+        document.getElementById('reg-password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') doRegister();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+    "chemistry": {"password": "password", "name": "สาขาวิชาเคมี", "role": "major"},
+    "physics": {"password": "password", "name": "สาขาวิชาฟิสิกส์", "role": "major"},
+    "biology": {"password": "password", "name": "สาขาวิชาชีววิทยา", "role": "major"},
+    "math": {"password": "password", "name": "สาขาวิชาคณิตศาสตร์", "role": "major"},
+    "envsci": {"password": "password", "name": "สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม", "role": "major"},
+    "compsci": {"password": "password", "name": "สาขาวิชาวิทยาการคอมพิวเตอร์", "role": "major"},
+    "publichealth": {"password": "password", "name": "สาขาวิชาสาธารณสุขศาสตร์", "role": "major"},
+    "compdigital": {"password": "password", "name": "สาขาวิชาเทคโนโลยีคอมพิวเตอร์และดิจิทัล", "role": "major"},
+    "datascience": {"password": "password", "name": "สาขาวิชาวิทยาการข้อมูล", "role": "major"},
+    "admin": {"password": "admin", "name": "สโมสรนักศึกษา", "role": "admin"}
+}
