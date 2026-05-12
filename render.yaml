@@ -2,6 +2,7 @@ services:
   - type: web
     name: scitech-activity-calendar
     env: python
+    region: singapore
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --workers 2 --threads 4 --bind 0.0.0.0:$PORT
     envVars:
@@ -9,7 +10,13 @@ services:
         value: production
       - key: SECRET_KEY
         generateValue: true
-    disk:
-      name: database
-      mountPath: /data
-      sizeGB: 1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: scitech-db
+          property: connectionString
+
+databases:
+  - name: scitech-db
+    databaseName: scitech
+    user: scitech
+    region: singapore
