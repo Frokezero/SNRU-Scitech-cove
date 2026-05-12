@@ -2,7 +2,9 @@ import sqlite3
 import os
 import json
 
-DB_FILE = 'database.sqlite'
+# Use /data/ persistent disk on Render, fallback to local for development
+_DATA_DIR = '/data' if os.path.isdir('/data') else '.'
+DB_FILE = os.path.join(_DATA_DIR, 'database.sqlite')
 
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE, timeout=10)
