@@ -178,4 +178,42 @@ cython_debug/
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
+.cursorignore
 .cursorindexingignore
+
+# ============================================================
+# PROJECT-SPECIFIC: Sensitive & Runtime Files
+# ============================================================
+
+# Database (contains all user data - NEVER upload)
+database.sqlite
+database.sqlite-wal
+database.sqlite-shm
+
+# User data JSON files (legacy, may contain passwords/info)
+users.json
+reset_tokens.json
+
+# Backup folder (contains copies of sensitive data)
+backups/
+
+# Uploaded student images (personal data)
+uploads/
+
+# Email credentials
+email_config.json
+
+# Python backup files
+*.bak
+*.py.bak
+
+# Log files
+*.log
+auto_open.log
+
+# Scratch/debug scripts
+scratch_check_db.py
+scratch/
+
+# Analysis/result files (local only)
+analysis_results.md

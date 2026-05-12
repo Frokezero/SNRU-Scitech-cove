@@ -1,0 +1,38 @@
+[
+    {
+        "id": "reg_f210a8bd29",
+        "event_id": "3efa4e94-db83-4d0f-ba41-5afddd151de5",
+        "event_title": "กิจกรรมเฝําระวังและปํองกันโรคพิษสุนัขบ้า",
+        "event_date": "เม.ย. 69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-05T09:48:17",
+        "status": "cancelled"
+    },
+    {
+        "id": "reg_1ea195d858",
+        "event_id": "fcc4fe34-54ba-4fed-b3fa-eb2ab5832c3e",
+        "event_title": "ประชุมคณะ",
+        "event_date": "11 พ.ค. 69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-11T09:12:48",
+        "status": "confirmed"
+    },
+    {
+        "id": "reg_36e06f614e",
+        "event_id": "fcc4fe34-54ba-4fed-b3fa-eb2ab5832c3e",
+        "event_title": "ประชุมคณะ",
+        "event_date": "11 พ.ค. 69",
+        "username": "67102122131",
+        "name": "ปาจรีย์ สุคนธชาติ",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "pajaree.su67@snru.ac.th",
+        "timestamp": "2026-05-11T09:25:42",
+        "status": "confirmed"
+    }
+]

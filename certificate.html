@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกียรติบัตร - University Activity Calendar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Charm:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --gold-dark: #996515;
+            --navy: #0f172a;
+            --white: #ffffff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+
+        body {
+            background: #e2e8f0;
+            font-family: 'Kanit', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .certificate-container {
+            width: 297mm;
+            height: 210mm;
+            background: var(--white);
+            padding: 40px;
+            position: relative;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.2);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Border with Ornaments */
+        .border-outer {
+            position: absolute;
+            top: 20px; left: 20px; right: 20px; bottom: 20px;
+            border: 4px solid var(--gold);
+            pointer-events: none;
+        }
+        .border-inner {
+            position: absolute;
+            top: 35px; left: 35px; right: 35px; bottom: 35px;
+            border: 1px solid var(--gold-dark);
+            pointer-events: none;
+        }
+        
+        /* Corner Ornaments (Simplified CSS version) */
+        .corner {
+            position: absolute;
+            width: 80px; height: 80px;
+            border: 8px solid var(--gold-dark);
+            z-index: 5;
+        }
+        .top-left { top: 15px; left: 15px; border-right: none; border-bottom: none; border-radius: 10px 0 0 0; }
+        .top-right { top: 15px; right: 15px; border-left: none; border-bottom: none; border-radius: 0 10px 0 0; }
+        .bottom-left { bottom: 15px; left: 15px; border-right: none; border-top: none; border-radius: 0 0 0 10px; }
+        .bottom-right { bottom: 15px; right: 15px; border-left: none; border-top: none; border-radius: 0 0 10px 0; }
+
+        .certificate-content {
+            width: 100%;
+            height: 100%;
+            border: 1px solid rgba(0,0,0,0.05);
+            padding: 60px 80px;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Watermark */
+        .certificate-content::before {
+            content: '';
+            position: absolute;
+            top: 55%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 350px; height: 350px;
+            background: url('static/img/snru_logo.png') no-repeat center;
+            background-size: contain;
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .header-logos {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .header-logos img { height: 75px; object-fit: contain; }
+
+        .cert-main-title {
+            font-family: 'Charm', cursive;
+            font-size: 72px;
+            color: var(--gold-dark);
+            font-weight: 700;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 0 rgba(0,0,0,0.1);
+        }
+
+        .cert-subtitle {
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            color: var(--navy);
+            margin-bottom: 30px;
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        .cert-body-text {
+            font-size: 20px;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .student-name {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 20px 0;
+            position: relative;
+            display: inline-block;
+        }
+        .student-name::after {
+            content: '';
+            position: absolute;
+            bottom: -5px; left: -20px; right: -20px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .event-info {
+            font-size: 24px;
+            font-weight: 600;
+            color: #0f172a;
+            margin: 15px 0;
+        }
+
+        .cert-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 40px;
+            padding: 0 40px;
+        }
+
+        .signature-box {
+            width: 250px;
+            text-align: center;
+        }
+        .signature-line {
+            border-top: 1.5px solid #94a3b8;
+            margin-top: 60px;
+            padding-top: 10px;
+        }
+        .signature-name { font-size: 16px; font-weight: 700; color: var(--navy); }
+        .signature-title { font-size: 13px; color: #64748b; }
+
+        .cert-id-tag {
+            position: absolute;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #94a3b8;
+            letter-spacing: 1px;
+        }
+
+        .controls {
+            position: fixed;
+            top: 20px; right: 20px;
+            display: flex; gap: 10px;
+            z-index: 1000;
+        }
+        .btn-control {
+            padding: 12px 24px;
+            border-radius: 50px;
+            border: none;
+            background: var(--navy);
+            color: white;
+            font-family: 'Kanit', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: 0.3s;
+        }
+        .btn-control:hover { transform: translateY(-3px); filter: brightness(1.2); }
+
+        @media print {
+            body { background: white; padding: 0; min-height: auto; }
+            .controls { display: none; }
+            .certificate-container { box-shadow: none; width: 297mm; height: 210mm; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button class="btn-control" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> พิมพ์เกียรติบัตร
+        </button>
+        <button class="btn-control" style="background:#64748b;" onclick="window.close()">
+            <i class="fa-solid fa-xmark"></i> ปิด
+        </button>
+    </div>
+
+    <div class="certificate-container">
+        <!-- Borders & Corners -->
+        <div class="border-outer"></div>
+        <div class="border-inner"></div>
+        <div class="corner top-left"></div>
+        <div class="corner top-right"></div>
+        <div class="corner bottom-left"></div>
+        <div class="corner bottom-right"></div>
+
+        <div class="certificate-content">
+            <div class="header-logos">
+                <img src="static/img/snru_logo.png" alt="SNRU">
+                <div style="text-align: right;">
+                    <img src="static/img/scitech_logo.png" alt="SciTech">
+                </div>
+            </div>
+            
+            <div>
+                <h1 class="cert-main-title">เกียรติบัตร</h1>
+                <p class="cert-subtitle">Certificate of Participation</p>
+
+                <p class="cert-body-text">ขอมอบเกียรติบัตรฉบับนี้เพื่อแสดงว่า</p>
+                <div class="student-name" id="cert-student-name">...</div>
+                
+                <p class="cert-body-text">ได้เข้าร่วมกิจกรรม</p>
+                <div class="event-info" id="cert-event-title">...</div>
+                
+                <p class="cert-body-text">
+                    จัดขึ้นเมื่อวันที่ <span id="cert-event-date" style="font-weight:700; color:var(--navy);">...</span><br>
+                    ณ คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏสกลนคร
+                </p>
+            </div>
+
+            <div class="cert-footer">
+                <div class="signature-box">
+                    <div class="signature-line">
+                        <div class="signature-name">(ผู้ช่วยศาสตราจารย์ ดร.สันทนา กูลรัตน์)</div>
+                        <div class="signature-title">คณบดีคณะวิทยาศาสตร์และเทคโนโลยี</div>
+                    </div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-line">
+                        <div class="signature-name">(...................................................)</div>
+                        <div class="signature-title">ประธานกรรมการดำเนินงาน</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cert-id-tag" id="cert-id-text">Verification ID: ...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadCertData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const partId = urlParams.get('id');
+            if (!partId) return;
+
+            try {
+                const res = await fetch(`/api/certificate/${partId}`);
+                if (!res.ok) {
+                    alert('ไม่สามารถโหลดข้อมูลเกียรติบัตรได้ หรือคุณไม่มีสิทธิ์เข้าถึง');
+                    window.close();
+                    return;
+                }
+                const data = await res.json();
+                
+                document.getElementById('cert-student-name').textContent = data.student_name;
+                document.getElementById('cert-event-title').textContent = data.event_title;
+                document.getElementById('cert-event-date').textContent = data.event_date;
+                document.getElementById('cert-event-location').textContent = data.event_location || 'คณะวิทยาศาสตร์และเทคโนโลยี';
+                document.getElementById('cert-id-text').textContent = 'CERT-ID: ' + data.id.substring(0,8).toUpperCase();
+                
+                document.title = `เกียรติบัตร_${data.student_name}_${data.event_title}`;
+            } catch(e) {
+                console.error(e);
+            }
+        }
+        loadCertData();
+    </script>
+</body>
+</html>

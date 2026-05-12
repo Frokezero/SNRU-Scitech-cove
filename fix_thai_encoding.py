@@ -19,9 +19,22 @@ def clean_thai_text(text):
     for corrupted, correct in corrections.items():
         text = text.replace(corrupted, correct)
     
-    # Fix common OCR artifacts
-    text = text.replace("ปจฉิม", "ปฐม") # Common OCR error for ปฐม
-    text = text.replace("ปจ", "ปั") # Fix missing Mai Han Akat
+    # Fix specific corrupted words/patterns found in events.json
+    specific_fixes = {
+        "ป็จฉิม": "ปัจฉิม",
+        "เฝําระวัง": "เฝ้าระวัง",
+        "ปํองกัน": "ป้องกัน",
+        "ฟื๋นคืนชีพ": "ฟื้นคืนชีพ",
+        "ปนเปื๋อน": "ปนเปื้อน",
+        "ผู้นานักศึกษา": "ผู้นำนักศึกษา",
+        "ปจ": "ปั",
+        "ปจฉิม": "ปัจฉิม",
+        "ฟื๋น": "ฟื้น",
+        "เปื๋อน": "เปื้อน"
+    }
+    
+    for corrupted, correct in specific_fixes.items():
+        text = text.replace(corrupted, correct)
     
     return text
 

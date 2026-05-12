@@ -3,203 +3,525 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบ - ปฏิทินกิจกรรม</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>เข้าสู่ระบบ - ปฏิทินกิจกรรมนักศึกษา 2569</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="theme-loader.js"></script>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Kanit', sans-serif; }
+
+        .theme-toggle-fixed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            transition: all 0.3s;
+        }
+        .theme-toggle-fixed:hover { background: rgba(255,255,255,0.3); }
+
+        html.dark-theme .login-card {
+            background: rgba(30, 41, 59, 0.95);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        html.dark-theme .auth-tabs { background: #0f172a; }
+        html.dark-theme .auth-tab.active { background: #1e293b; color: #0ea5e9; }
+        html.dark-theme .form-group label { color: #cbd5e1; }
+        html.dark-theme input, html.dark-theme select {
+            background: #0f172a;
+            color: white;
+            border-color: #334155;
+        }
+
         body {
-            background-color: #f1f5f9;
+            background: linear-gradient(135deg, #1e293b 0%, #0f4c81 50%, #1e3a5f 100%);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        /* Decorative background circles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -150px; right: -150px;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(250,204,21,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -150px; left: -150px;
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(2,132,199,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 420px;
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Brand header above card */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .brand-logo {
+            width: 200px; height: 200px;
+            background: white;
+            border-radius: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            margin-bottom: 24px;
+        }
+        .brand-logo img {
+            width: 100%; height: 100%; object-fit: contain; padding: 15px;
+        }
+        .brand-header h1 {
+            color: #fff;
+            font-size: 38px;
+            font-weight: 800;
+            line-height: 1.2;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            letter-spacing: 1px;
+        }
+        .brand-header p {
+            color: #fff;
+            font-size: 19px;
+            margin-top: 10px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        /* Card */
+        .login-card {
+            background: rgba(255,255,255,0.97);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 36px 32px 28px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+        }
+
+        /* Tabs */
+        .auth-tabs {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 28px;
+            gap: 4px;
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 9px;
+            text-align: center;
+            border-radius: 9px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.25s;
+            border: none;
+            background: transparent;
             font-family: 'Kanit', sans-serif;
         }
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-            width: 100%;
-            max-width: 400px;
-        }
-        .login-container h2 {
+        .auth-tab.active {
+            background: #fff;
             color: #0284c7;
-            text-align: center;
-            margin-bottom: 25px;
-            font-size: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-weight: 600;
         }
-        .form-group {
-            margin-bottom: 15px;
-        }
+
+        /* Form */
+        .form-group { margin-bottom: 18px; }
         .form-group label {
             display: block;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #475569;
+            margin-bottom: 7px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
         }
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-family: 'Kanit', sans-serif;
+        .input-wrapper {
+            position: relative;
+        }
+        .input-wrapper .input-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
             font-size: 15px;
+            pointer-events: none;
+        }
+        .input-wrapper input,
+        .input-wrapper select {
+            width: 100%;
+            padding: 11px 42px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-family: 'Kanit', sans-serif;
+            font-size: 14px;
+            color: #1e293b;
+            background: #f8fafc;
+            transition: all 0.2s;
             box-sizing: border-box;
         }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 6px;
+        .input-wrapper select {
+            appearance: none;
             cursor: pointer;
+        }
+        .input-wrapper input:focus,
+        .input-wrapper select:focus {
+            outline: none;
+            border-color: #0284c7;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(2,132,199,0.1);
+        }
+        .input-wrapper .toggle-pw {
+            position: absolute;
+            right: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 15px;
+            transition: color 0.2s;
+            background: none; border: none;
+        }
+        .input-wrapper .toggle-pw:hover { color: #0284c7; }
+
+        .name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* Submit button */
+        .btn-submit {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 12px;
             font-family: 'Kanit', sans-serif;
             font-size: 16px;
-            font-weight: 500;
-            transition: 0.2s;
-        }
-        .btn-primary {
-            background: #0284c7;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #0369a1;
-        }
-        .btn-success {
-            background: #16a34a;
-            color: white;
-        }
-        .btn-success:hover {
-            background: #15803d;
-        }
-        .switch-mode {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-        .switch-mode a {
-            color: #0284c7;
-            text-decoration: underline;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 4px;
         }
+        .btn-login {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: white;
+            box-shadow: 0 4px 15px rgba(2,132,199,0.4);
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(2,132,199,0.5); }
+        .btn-register {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white;
+            box-shadow: 0 4px 15px rgba(22,163,74,0.4);
+        }
+        .btn-register:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(22,163,74,0.5); }
+        .btn-submit:active { transform: translateY(0); }
+
+        /* Message area */
+        #auth-message {
+            min-height: 22px;
+            margin-top: 14px;
+            font-size: 13px;
+            text-align: center;
+            border-radius: 8px;
+            padding: 0;
+            transition: all 0.3s;
+        }
+        #auth-message.visible {
+            padding: 10px 14px;
+        }
+        #auth-message.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        #auth-message.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        #auth-message.loading { background: #eff6ff; color: #0284c7; border: 1px solid #bfdbfe; }
+
+        /* Back link */
         .back-link {
-            display: block;
-            text-align: center;
-            margin-top: 30px;
-            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 20px;
+            color: rgba(255,255,255,0.6);
             text-decoration: none;
-            font-size: 14px;
+            font-size: 13px;
+            transition: color 0.2s;
         }
-        .back-link:hover {
-            text-decoration: underline;
+        .back-link:hover { color: #facc15; }
+
+        /* Panel switching */
+        .auth-panel { display: none; }
+        .auth-panel.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+        @media (max-width: 768px) {
+            .brand-logo { width: 140px; height: 140px; border-radius: 30px; margin-bottom: 20px; padding: 15px; }
+            .brand-header h1 { font-size: 28px; }
+            .brand-header p { font-size: 16px; }
         }
-        #auth-error {
-            color: #dc2626;
-            text-align: center;
-            margin-top: 15px;
-            font-size: 14px;
-            min-height: 20px;
-        }
+
         @media (max-width: 480px) {
-            .login-container { padding: 25px; border-radius: 0; box-shadow: none; }
-            #register-form > div[style*="display: flex"] { flex-direction: column !important; gap: 0 !important; }
-            #register-form .form-group { margin-bottom: 15px !important; }
+            .brand-logo { width: 110px; height: 110px; border-radius: 24px; margin-bottom: 16px; padding: 12px; }
+            .brand-header h1 { font-size: 24px; }
+            .brand-header p { font-size: 14px; }
+            .login-card { padding: 24px 16px 20px; border-radius: 20px; }
+            .name-row { grid-template-columns: 1fr; gap: 0; }
         }
     </style>
 </head>
 <body>
-
-    <div class="login-container">
-        <!-- Login Form -->
-        <div id="login-form">
-            <h2 id="auth-title">เข้าสู่ระบบ</h2>
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" id="login-username" placeholder="กรอก Username">
-            </div>
-            <div class="form-group">
-                <label>รหัสผ่าน</label>
-                <input type="password" id="login-password" placeholder="กรอกรหัสผ่าน">
-            </div>
-            <button class="btn btn-primary" onclick="doLogin()">เข้าสู่ระบบ</button>
-            
-            <div class="switch-mode">
-                นักศึกษาใหม่? <a onclick="switchAuthMode('register')">สมัครสมาชิก</a>
-            </div>
+    <button class="theme-toggle-fixed" onclick="toggleTheme()">
+        <i id="theme-toggle-icon" class="fa-solid fa-moon"></i>
+    </button>
+    <div class="login-wrapper">
+        <!-- Brand Header -->
+        <div class="brand-header">
+            <div class="brand-logo"><img src="static/img/scitech_logo.png" alt="SciTech Logo"></div>
+            <h1>ปฏิทินกิจกรรมนักศึกษา 2569</h1>
+            <p>คณะวิทยาศาสตร์และเทคโนโลยี มรสน.</p>
         </div>
 
-        <!-- Register Form -->
-        <div id="register-form" style="display: none;">
-            <h2 id="auth-title">สมัครสมาชิก</h2>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                    <label>ชื่อ</label>
-                    <input type="text" id="reg-firstname" placeholder="ชื่อจริง">
+        <!-- Card -->
+        <div class="login-card">
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">
+                    <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+                </button>
+                <button class="auth-tab" id="tab-register" onclick="switchTab('register')">
+                    <i class="fa-solid fa-user-plus"></i> สมัครสมาชิก
+                </button>
+            </div>
+
+            <!-- LOGIN PANEL -->
+            <div class="auth-panel active" id="panel-login">
+                <div class="form-group">
+                    <label><i class="fa-solid fa-id-card" style="color:#0284c7;margin-right:5px;"></i>รหัสนักศึกษา / Username</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user input-icon"></i>
+                        <input type="text" id="login-username" placeholder="กรอก Username" autocomplete="username">
+                    </div>
                 </div>
-                <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                    <label>นามสกุล</label>
-                    <input type="text" id="reg-lastname" placeholder="นามสกุลจริง">
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <label><i class="fa-solid fa-lock" style="color:#0284c7;margin-right:5px;"></i>รหัสผ่าน</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="login-password" placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+                        <button class="toggle-pw" onclick="togglePw('login-password', this)" tabindex="-1">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
+                <div style="text-align: right; margin-bottom: 20px;">
+                    <button onclick="switchTab('forgot')" style="background:none; border:none; color:#64748b; font-size:12px; cursor:pointer; font-family:inherit; transition:color 0.2s;">
+                        ลืมรหัสผ่าน?
+                    </button>
+                </div>
+                <button class="btn-submit btn-login" onclick="doLogin()">
+                    <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+                </button>
             </div>
-            <div class="form-group">
-                <label>รหัสนักศึกษา</label>
-                <input type="text" id="reg-username" placeholder="ใช้เป็น Username ในการเข้าสู่ระบบ">
+
+            <!-- FORGOT PASSWORD PANEL -->
+            <div class="auth-panel" id="panel-forgot">
+                <div style="text-align:center; margin-bottom:24px;">
+                    <div style="width:50px; height:50px; background:#eff6ff; color:#0284c7; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:12px;">
+                        <i class="fa-solid fa-envelope-open-text"></i>
+                    </div>
+                    <h2 style="font-size:18px; color:#1e293b; margin-bottom:8px;">ลืมรหัสผ่าน?</h2>
+                    <p style="font-size:13px; color:#64748b;">ระบุอีเมลของคุณเพื่อรับลิงก์สำหรับเปลี่ยนรหัสผ่าน</p>
+                </div>
+                <div class="form-group">
+                    <label>อีเมลมหาวิทยาลัย</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                        <input type="email" id="forgot-email" placeholder="example@snru.ac.th">
+                    </div>
+                </div>
+                <button class="btn-submit btn-login" onclick="doForgot()">
+                    <i class="fa-solid fa-paper-plane"></i> ส่งลิงก์เปลี่ยนรหัส
+                </button>
+                <button onclick="switchTab('login')" style="width:100%; margin-top:12px; background:none; border:none; color:#64748b; font-size:13px; cursor:pointer; font-family:inherit;">
+                    <i class="fa-solid fa-arrow-left"></i> กลับไปหน้าเข้าสู่ระบบ
+                </button>
             </div>
-            <div class="form-group">
-                <label>อีเมล (Email)</label>
-                <input type="email" id="reg-email" placeholder="ตัวอย่าง: student@email.com">
+
+            <!-- REGISTER PANEL -->
+            <div class="auth-panel" id="panel-register">
+                <div class="name-row">
+                    <div class="form-group">
+                        <label>ชื่อจริง</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user input-icon"></i>
+                            <input type="text" id="reg-firstname" placeholder="ชื่อ">
+                        </div>
+                        <small style="color: #64748b; font-size: 11px;">* ภาษาไทยเท่านั้น</small>
+                    </div>
+                    <div class="form-group">
+                        <label>นามสกุล</label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user input-icon"></i>
+                            <input type="text" id="reg-lastname" placeholder="นามสกุล">
+                        </div>
+                        <small style="color: #64748b; font-size: 11px;">* ภาษาไทยเท่านั้น</small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-id-badge" style="color:#16a34a;margin-right:5px;"></i>รหัสนักศึกษา</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-hashtag input-icon"></i>
+                        <input type="text" id="reg-username" placeholder="กรอกรหัสนักศึกษา (ตัวเลขเท่านั้น)" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    </div>
+                    <small style="color: #64748b; font-size: 11px;">* เฉพาะตัวเลข 11 หลัก เท่านั้น</small>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-envelope" style="color:#16a34a;margin-right:5px;"></i>อีเมล</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                        <input type="email" id="reg-email" placeholder="student@snru.ac.th">
+                    </div>
+                    <small style="color: #64748b; font-size: 11px;">* แนะนำให้ใช้อีเมลมหาวิทยาลัย (@snru.ac.th)</small>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-graduation-cap" style="color:#16a34a;margin-right:5px;"></i>สาขาวิชา</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-building-columns input-icon"></i>
+                        <select id="reg-major">
+                            <option value="">-- เลือกสาขาวิชา --</option>
+                            <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
+                            <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
+                            <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
+                            <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
+                            <option value="สาขาวิชาสถิติ">สาขาวิชาสถิติ</option>
+                            <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
+                            <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ</option>
+                            <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
+                            <option value="สาขาวิชาคหกรรมศาสตร์">สาขาวิชาคหกรรมศาสตร์</option>
+                            <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-key" style="color:#16a34a;margin-right:5px;"></i>รหัสผ่าน</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="reg-password" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 6 ตัว)">
+                        <button class="toggle-pw" onclick="togglePw('reg-password', this)" tabindex="-1">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button class="btn-submit btn-register" onclick="doRegister()">
+                    <i class="fa-solid fa-user-plus"></i> ยืนยันสมัครสมาชิก
+                </button>
             </div>
-            <div class="form-group">
-                <label>สาขาวิชา</label>
-                <select id="reg-major" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Kanit', sans-serif; font-size: 15px; background: white;">
-                    <option value="">-- เลือกสาขาวิชา --</option>
-                    <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
-                    <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
-                    <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
-                    <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
-                    <option value="สาขาวิชาสถิติ">สาขาวิชาสถิติ</option>
-                    <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
-                    <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ</option>
-                    <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
-                    <option value="สาขาวิชาคหกรรมศาสตร์">สาขาวิชาคหกรรมศาสตร์</option>
-                    <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>รหัสผ่าน</label>
-                <input type="password" id="reg-password" placeholder="ตั้งรหัสผ่าน">
-            </div>
-            <button class="btn btn-success" onclick="doRegister()">ยืนยันสมัครสมาชิก</button>
-            
-            <div class="switch-mode">
-                มีบัญชีอยู่แล้ว? <a onclick="switchAuthMode('login')">กลับไปเข้าสู่ระบบ</a>
-            </div>
+
+            <!-- Message -->
+            <div id="auth-message"></div>
         </div>
 
-        <div id="auth-error"></div>
-        
-        <a href="/" class="back-link">← กลับไปหน้าปฏิทิน (บุคคลทั่วไป)</a>
+        <a href="/" class="back-link">
+            <i class="fa-solid fa-arrow-left"></i> กลับไปหน้าปฏิทิน (บุคคลทั่วไป)
+        </a>
     </div>
 
     <script>
-        function switchAuthMode(mode) {
-            document.getElementById('auth-error').textContent = '';
-            if (mode === 'login') {
-                document.getElementById('login-form').style.display = 'block';
-                document.getElementById('register-form').style.display = 'none';
-            } else {
-                document.getElementById('login-form').style.display = 'none';
-                document.getElementById('register-form').style.display = 'block';
+        function switchTab(mode) {
+            clearMsg();
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
+            const tab = document.getElementById('tab-' + mode);
+            if (tab) tab.classList.add('active');
+            document.getElementById('panel-' + mode).classList.add('active');
+        }
+
+        async function doForgot() {
+            const email = document.getElementById('forgot-email').value.trim();
+            if (!email) { showMsg('กรุณากรอกอีเมล', 'error'); return; }
+            if (!email.includes('@')) {
+                showMsg('⚠ กรุณาระบุอีเมลที่ถูกต้อง', 'error'); return;
+            }
+            
+            showMsg('กำลังส่งลิงก์เปลี่ยนรหัสผ่าน...', 'loading');
+            try {
+                const res = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: email})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showMsg('✓ ส่งลิงก์เปลี่ยนรหัสผ่านสำเร็จ! โปรดตรวจสอบใน Inbox ของคุณ', 'success');
+                    document.getElementById('forgot-email').value = '';
+                } else {
+                    showMsg('⚠ ' + (data.message || 'ไม่พบอีเมลนี้ในระบบ'), 'error');
+                }
+            } catch(e) {
+                showMsg('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
             }
         }
 
+        function togglePw(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye';
+            }
+        }
+
+        function showMsg(text, type) {
+            const el = document.getElementById('auth-message');
+            el.textContent = text;
+            el.className = 'visible ' + type;
+        }
+        function clearMsg() {
+            const el = document.getElementById('auth-message');
+            el.textContent = '';
+            el.className = '';
+        }
+
         async function doLogin() {
-            const u = document.getElementById('login-username').value;
+            const u = document.getElementById('login-username').value.trim();
             const p = document.getElementById('login-password').value;
-            const err = document.getElementById('auth-error');
-            err.textContent = 'กำลังตรวจสอบ...';
-            
+            if (!u || !p) { showMsg('กรุณากรอกข้อมูลให้ครบถ้วน', 'error'); return; }
+            showMsg('กำลังตรวจสอบข้อมูล...', 'loading');
             try {
                 const res = await fetch('/api/login', {
                     method: 'POST',
@@ -208,22 +530,19 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    err.style.color = '#16a34a';
-                    err.textContent = 'เข้าสู่ระบบสำเร็จ กำลังพาไปหน้าหลัก...';
+                    showMsg('✓ เข้าสู่ระบบสำเร็จ กำลังพาไปหน้าหลัก...', 'success');
                     setTimeout(() => {
                         if (data.user && (data.user.role === 'admin' || data.user.role === 'major')) {
                             window.location.href = '/admin';
                         } else {
                             window.location.href = '/';
                         }
-                    }, 500);
+                    }, 600);
                 } else {
-                    err.style.color = '#dc2626';
-                    err.textContent = data.message || 'รหัสผ่านไม่ถูกต้อง';
+                    showMsg('⚠ ' + (data.message || 'รหัสผ่านไม่ถูกต้อง'), 'error');
                 }
             } catch(e) {
-                err.style.color = '#dc2626';
-                err.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+                showMsg('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
             }
         }
 
@@ -234,67 +553,68 @@
             const email = document.getElementById('reg-email').value.trim();
             const m = document.getElementById('reg-major').value;
             const p = document.getElementById('reg-password').value;
-            const err = document.getElementById('auth-error');
-            
+
+            // Regex patterns
+            const thaiRegex = /^[ก-๙]+$/;
+            const numRegex = /^[0-9]+$/;
+
             if (!fname || !lname || !u || !email || !p || !m) {
-                err.style.color = '#dc2626';
-                err.textContent = 'กรุณากรอกข้อมูลให้ครบถ้วน';
-                return;
+                showMsg('⚠ กรุณากรอกข้อมูลให้ครบทุกช่อง', 'error'); return;
             }
-            
-            // Basic email validation
+
+            // 1. Validation for Name (Thai only)
+            if (!thaiRegex.test(fname) || !thaiRegex.test(lname)) {
+                showMsg('⚠ ชื่อและนามสกุลต้องเป็นภาษาไทยเท่านั้น (ห้ามใช้อักขระพิเศษ)', 'error'); return;
+            }
+
+            // 2. Validation for Student ID (Numbers only)
+            if (!numRegex.test(u)) {
+                showMsg('⚠ รหัสนักศึกษาต้องเป็นตัวเลขเท่านั้น', 'error'); return;
+            }
+
+            // 3. Validation for Email
             if (!email.includes('@')) {
-                err.style.color = '#dc2626';
-                err.textContent = 'กรุณากรอกรูปแบบอีเมลให้ถูกต้อง';
-                return;
+                showMsg('⚠ กรุณาระบุอีเมลที่ถูกต้อง', 'error'); return;
             }
-            
-            const n = fname + ' ' + lname;
-            
-            err.textContent = 'กำลังสมัครสมาชิก (อาจใช้เวลาสักครู่ในการส่งอีเมล)...';
-            err.style.color = '#0284c7';
-            
+
+            if (p.length < 6) {
+                showMsg('⚠ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error'); return;
+            }
+
+            showMsg('กำลังสมัครสมาชิก (อาจใช้เวลาสักครู่)...', 'loading');
             try {
                 const res = await fetch('/api/register', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name: n, username: u, email: email, major: m, password: p})
+                    body: JSON.stringify({name: fname + ' ' + lname, username: u, email: email, major: m, password: p})
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    err.style.color = '#16a34a';
-                    err.textContent = 'สมัครสมาชิกสำเร็จ! กำลังพาไปหน้าหลัก...';
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
+                    showMsg('✓ สมัครสมาชิกสำเร็จ! กำลังพาไปหน้าหลัก...', 'success');
+                    setTimeout(() => { window.location.href = '/'; }, 1000);
                 } else {
-                    err.style.color = '#dc2626';
-                    err.textContent = data.message || 'ไม่สามารถสมัครสมาชิกได้';
+                    showMsg('⚠ ' + (data.message || 'ไม่สามารถสมัครสมาชิกได้'), 'error');
                 }
             } catch(e) {
-                err.style.color = '#dc2626';
-                err.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+                showMsg('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
             }
         }
-        
-        // Check if already logged in and redirect
-        fetch('/api/me').then(res => res.json()).then(data => {
-            if (data.success) {
-                if (data.user.role === 'admin' || data.user.role === 'major') {
-                    window.location.href = '/admin';
-                } else {
-                    window.location.href = '/';
-                }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                if (document.getElementById('panel-login').classList.contains('active')) doLogin();
+                else doRegister();
             }
-        }).catch(e => {});
-        
-        // Listen to enter key
-        document.getElementById('login-password').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') doLogin();
         });
-        document.getElementById('reg-password').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') doRegister();
-        });
+
+        // Auto-redirect if already logged in
+        fetch('/api/me').then(r => r.json()).then(d => {
+            if (d.success) {
+                if (d.user.role === 'admin' || d.user.role === 'major') window.location.href = '/admin';
+                else window.location.href = '/';
+            }
+        }).catch(() => {});
     </script>
 </body>
 </html>

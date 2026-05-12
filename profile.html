@@ -4,322 +4,936 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>โปรไฟล์นักศึกษา - ปฏิทินกิจกรรม</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="theme-loader.js"></script>
+    <script src="ui-shared.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Kanit', sans-serif; }
-        body { background-color: #f8fafc; color: #334155; padding: 20px; display: flex; justify-content: center; }
-        .container { max-width: 800px; width: 100%; }
+
+        body {
+            background: #f1f5f9;
+            color: #334155;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        html.dark-theme body {
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        html.dark-theme .card, 
+        html.dark-theme .modal-content, 
+        html.dark-theme .history-item {
+            background: #1e293b;
+            color: #f8fafc;
+            border-color: #334155;
+        }
+        html.dark-theme .history-title { color: #ffffff; }
+        html.dark-theme .history-date { color: #94a3b8; }
+        html.dark-theme .form-group label { color: #cbd5e1; }
+        html.dark-theme input, html.dark-theme select, html.dark-theme textarea {
+            background: #0f172a;
+            color: white;
+            border-color: #334155;
+        }
+        html.dark-theme .score-box { background: rgba(255,255,255,0.05); }
+
+        /* Notification System Overrides for Profile */
+        .notification-container { position: relative; display: inline-block; }
+        .notif-badge {
+            position: absolute; top: -2px; right: -2px; background: #ef4444; color: white;
+            font-size: 10px; font-weight: 700; min-width: 16px; height: 16px;
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            padding: 0 4px; border: 2px solid #1e293b;
+        }
+        .notif-dropdown {
+            position: absolute; top: 100%; right: 0; margin-top: 10px; width: 340px;
+            background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: none; z-index: 1100; overflow: hidden; color: #1e293b;
+        }
+        .notif-dropdown.active { display: block; }
+        .notif-header { padding: 14px 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .notif-header h3 { font-size: 15px; font-weight: 700; margin: 0; }
+        .notif-list { max-height: 380px; overflow-y: auto; }
+        .notif-item { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: 0.2s; }
+        .notif-item:hover { background: #f8fafc; }
+        .notif-item.unread { background: rgba(2, 132, 199, 0.05); border-left: 3px solid #0284c7; }
+        .notif-item-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+        .notif-item-message { font-size: 12px; color: #64748b; line-height: 1.4; }
+        .notif-item-time { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+        .notif-empty { padding: 40px 16px; text-align: center; color: #94a3b8; }
+        .notif-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 1090; }
+        .notif-backdrop.active { display: block; }
+
+        @media (max-width: 768px) {
+            .notif-dropdown { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; border-radius: 20px 20px 0 0; }
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle-profile {
+            display: none;
+            background: rgba(255,255,255,0.12);
+            border: none;
+            color: white;
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        @media (max-width: 768px) {
+            .mobile-menu-toggle-profile { display: flex; }
+            .nav-actions {
+                display: none;
+                position: absolute;
+                top: 64px;
+                left: 0; right: 0;
+                background: linear-gradient(135deg, #1e293b, #0f4c81);
+                flex-direction: column;
+                padding: 12px 16px;
+                gap: 10px;
+                z-index: 200;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            }
+            .nav-actions.active { display: flex; }
+            .btn-nav { width: 100%; justify-content: center; }
+        }
+
+        /* Top nav bar */
+        .top-nav {
+            background: linear-gradient(135deg, #1e293b, #0f4c81);
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .top-nav .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .top-nav .nav-brand .nav-logo {
+            background: white;
+            width: 50px; height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .top-nav .nav-brand .nav-logo img {
+            width: 100%; height: 100%; object-fit: contain; padding: 4px;
+        }
+        .nav-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .btn-nav {
+            padding: 7px 15px;
+            border-radius: 8px;
+            border: none;
+            font-family: 'Kanit', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .btn-ghost { background: rgba(255,255,255,0.12); color: white; }
+        .btn-ghost:hover { background: rgba(255,255,255,0.22); }
+
+        /* Main layout */
+        .container {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 28px 20px 60px;
+        }
+
+        /* Profile Hero Card */
+        .profile-hero {
+            background: linear-gradient(135deg, #1e293b 0%, #0f4c81 100%);
+            border-radius: 20px;
+            padding: 28px;
+            color: white;
+            margin-bottom: 22px;
+            position: relative;
+            overflow: hidden;
+        }
+        .profile-hero::before {
+            content: '';
+            position: absolute;
+            top: -60px; right: -60px;
+            width: 220px; height: 220px;
+            background: rgba(250,204,21,0.12);
+            border-radius: 50%;
+        }
+        .profile-hero-top {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+        .avatar {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, #facc15, #f59e0b);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: #1e293b;
+            box-shadow: 0 4px 16px rgba(250,204,21,0.4);
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .profile-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        .profile-meta { font-size: 13px; opacity: 0.75; margin-bottom: 2px; }
+
+        .score-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .score-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .score-box .num {
+            font-size: 26px;
+            font-weight: 800;
+            color: #facc15;
+            line-height: 1;
+        }
+        .score-box .lbl {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
+
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid #f1f5f9;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #1e293b;
+            font-size: 15px;
+        }
+        html.dark-theme .card-header { color: #f8fafc; border-color: #334155; }
+        .icon-circle {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .card-body { padding: 22px; }
+
+        /* Form */
+        .form-group { margin-bottom: 18px; }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #475569;
+        }
+        select, input[type="file"] {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            font-family: inherit;
+            font-size: 14px;
+            background: #fff;
+            color: #1e293b;
+            outline: none;
+            transition: all 0.2s;
+        }
+        select:focus { border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.1); }
+
+        .btn-submit-work {
+            width: 100%;
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(2,132,199,0.25);
+        }
+        .btn-submit-work:hover { background: #0369a1; transform: translateY(-1px); }
+        .btn-submit-work:active { transform: translateY(0); }
+
+        /* History */
+        .history-item {
+            padding: 16px 22px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            gap: 16px;
+            transition: background 0.2s;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-img {
+            width: 60px; height: 60px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #f1f5f9;
+            cursor: pointer;
+        }
+        .history-info { flex: 1; }
+        .history-title { font-weight: 600; font-size: 14.5px; color: #1e293b; margin-bottom: 4px; }
+        .history-date { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+        .status-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-pending { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+        .badge-approved { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .badge-rejected { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
-        .btn-outline { background: white; border: 1px solid #cbd5e1; color: #475569; }
-        .btn-outline:hover { background: #f1f5f9; }
-        .btn-primary { background: #0284c7; color: white; }
-        .btn-primary:hover { background: #0369a1; }
-        .btn-success { background: #16a34a; color: white; }
-        .btn-success:hover { background: #15803d; }
-        
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
-        
-        .profile-info { display: flex; gap: 20px; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #f1f5f9; margin-bottom: 20px; }
-        .profile-icon { width: 70px; height: 70px; background: #e0f2fe; color: #0284c7; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 30px; }
-        .profile-details h1 { font-size: 22px; color: #0f172a; margin-bottom: 5px; }
-        .profile-details p { color: #64748b; font-size: 14px; margin-bottom: 2px; }
-        
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #1e293b; font-size: 15px; }
-        .form-group select, .form-group input[type="file"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Kanit'; font-size: 14px; background: #fff; }
-        
-        .alert { padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 14px; }
-        .alert-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-        .alert-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-        
-        .history-item { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; gap: 20px; align-items: flex-start; transition: transform 0.2s; }
-        .history-item:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .history-img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; }
-        .history-details h3 { font-size: 16px; color: #0f172a; margin-bottom: 5px; }
-        .history-details p { font-size: 13px; color: #64748b; margin-bottom: 5px; }
-        .status-badge { font-size: 11px; background: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 20px; display: inline-block; font-weight: 500; }
-        
-        @media (max-width: 600px) {
-            body { padding: 10px; }
-            .header { flex-direction: column; gap: 10px; align-items: stretch; }
-            .profile-info { flex-direction: column; text-align: center; }
-            .profile-icon { margin: 0 auto; }
-            .profile-details { display: flex; flex-direction: column; align-items: center; }
+        .cat-badge {
+            font-size: 10px;
+            background: #0284c7;
+            color: white;
+            padding: 0px 6px;
+            border-radius: 4px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .empty-state {
+            padding: 40px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .empty-state i { font-size: 32px; margin-bottom: 12px; opacity: 0.3; }
+
+        /* Alert */
+        .alert {
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .alert-info { background: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; }
+
+        #upload-msg {
+            margin-top: 14px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            text-align: center;
+            display: none;
+        }
+        #upload-msg.visible { display: block; }
+        #upload-msg.error { background: #fef2f2; color: #dc2626; }
+        #upload-msg.success { background: #f0fdf4; color: #16a34a; }
+        #upload-msg.loading { background: #f8fafc; color: #64748b; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            body { padding: 10px; background: white; }
+            .container { padding: 0; border-radius: 0; box-shadow: none; border: none; }
+            
+            .top-nav {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px;
+            }
+            .nav-actions {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+            .btn-nav { flex: 1; text-align: center; justify-content: center; padding: 10px 8px; font-size: 12px; }
+            
+            .profile-hero { padding: 20px; border-radius: 16px; margin-bottom: 16px; }
+            .profile-hero-top { flex-direction: column; text-align: center; }
+            .avatar { margin: 0 auto; width: 80px; height: 80px; }
+            .profile-name { font-size: 20px; }
+            .profile-hero-top > div > div { justify-content: center; }
+            
+            .score-row { grid-template-columns: 1fr; gap: 8px; }
+            .score-box { padding: 16px; }
+            .score-box .num { font-size: 24px; }
+            
+            .history-item { flex-direction: column; align-items: flex-start; padding: 16px; }
+            .history-img { width: 100%; height: 140px; }
+            .history-title { font-size: 16px; margin-top: 8px; }
+            
+            .card-header { padding: 16px; font-size: 14px; }
+            .card-body { padding: 16px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h2 style="color: #0284c7;"><i class="fa-solid fa-graduation-cap"></i> ระบบส่งผลงานนักศึกษา</h2>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-outline" onclick="shareWebsite()"><i class="fa-solid fa-share-nodes"></i> แชร์เว็บ</button>
-                <a href="/" class="btn btn-outline"><i class="fa-solid fa-arrow-left"></i> กลับปฏิทิน</a>
-            </div>
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <div class="nav-logo"><img src="static/img/scitech_logo.png" alt="SciTech Logo"></div>
+            ระบบส่งผลงานนักศึกษา
         </div>
+        <button class="mobile-menu-toggle-profile" onclick="document.getElementById('profile-nav-actions').classList.toggle('active')">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="nav-actions" id="profile-nav-actions">
+            <a href="/" class="btn-nav btn-ghost"><i class="fa-solid fa-house"></i></a>
+            <div id="admin-btn-container" style="display: none;">
+                <a href="/admin" class="btn-nav btn-ghost"><i class="fa-solid fa-user-shield"></i></a>
+            </div>
 
-        <div class="card">
-            <div class="profile-info">
-                <div class="profile-icon">
-                    <i class="fa-solid fa-user"></i>
-                </div>
-                <div class="profile-details">
-                    <h1 id="user-name">กำลังโหลด...</h1>
-                    <p><i class="fa-solid fa-id-card"></i> รหัสนักศึกษา: <span id="user-id">-</span></p>
-                    <p><i class="fa-solid fa-building-columns"></i> สาขาวิชา: <span id="user-major">-</span></p>
-                    <div style="margin-top: 10px; display: inline-block; background: #fffbeb; border: 1px solid #fde68a; color: #b45309; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">
-                        <i class="fa-solid fa-star"></i> คะแนนสะสม: <span id="user-score">0</span> คะแนน
+            <!-- Notifications (Always Visible) -->
+            <div class="notification-container" id="notif-container" style="display: none;">
+                <button class="btn-nav btn-ghost" id="notif-btn" onclick="toggleNotifications()" style="padding: 7px 12px; position: relative;">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notif-badge" id="notif-badge" style="display: none;">0</span>
+                </button>
+                <div class="notif-dropdown" id="notif-dropdown">
+                    <div class="notif-header">
+                        <h3><i class="fa-solid fa-bell" style="color:#0284c7;"></i> การแจ้งเตือน</h3>
+                        <button onclick="markAllAsRead()" style="background: none; border: none; color: #0284c7; cursor: pointer; font-family: inherit; font-size: 12px;">อ่านทั้งหมด</button>
+                    </div>
+                    <div class="notif-list" id="notif-list">
+                        <div class="notif-empty">ไม่มีการแจ้งเตือน</div>
                     </div>
                 </div>
             </div>
+            <div class="notif-backdrop" id="notif-backdrop" onclick="closeNotifications()"></div>
+            <button class="btn-nav btn-ghost" onclick="toggleTheme()" title="เปลี่ยนธีม">
+                <i id="theme-toggle-icon" class="fa-solid fa-moon"></i>
+            </button>
+            <button class="btn-nav btn-ghost" onclick="shareWebsite()">
+                <i class="fa-solid fa-share-nodes"></i> แชร์
+            </button>
+            <a href="/" class="btn-nav btn-ghost">
+                <i class="fa-solid fa-arrow-left"></i> ปฏิทิน
+            </a>
+            <button class="btn-nav" onclick="doLogout()" style="background:rgba(220,38,38,0.15);color:#fca5a5;">
+                <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+            </button>
+        </div>
+    </nav>
 
-            <h3 style="margin-bottom: 15px; color: #0f172a; font-size: 18px;"><i class="fa-solid fa-camera"></i> ส่งภาพกิจกรรมประจำวันนี้</h3>
-            
-            <div id="today-alert" class="alert alert-info" style="display: none;">
-                กำลังตรวจสอบกิจกรรมที่มีในวันนี้...
+    <div class="container">
+        <!-- Profile Hero -->
+        <div class="profile-hero">
+            <div class="profile-hero-top">
+                <div class="avatar">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </div>
+                <div>
+                    <div class="profile-name" id="user-name">กำลังโหลด...</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px;">
+                        <div class="profile-meta"><i class="fa-solid fa-id-card-clip" style="color: #facc15;"></i> <span id="user-id">-</span></div>
+                        <div class="profile-meta"><i class="fa-solid fa-graduation-cap" style="color: #facc15;"></i> <span id="user-major">-</span></div>
+                        <div class="profile-meta"><i class="fa-solid fa-calendar-user" style="color: #facc15;"></i> <span id="user-year">-</span></div>
+                    </div>
+                </div>
             </div>
-            
-            <div id="upload-section" style="display: none; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px dashed #cbd5e1;">
-                <div class="form-group">
-                    <label>กิจกรรมที่จัดในวันนี้ (กรุณาเลือก):</label>
-                    <select id="activity-select"></select>
+            <div class="score-row">
+                <div class="score-box">
+                    <div class="num" id="user-score">0</div>
+                    <div class="lbl">⭐ คะแนนสะสม</div>
                 </div>
-                <div class="form-group">
-                    <label>อัปโหลดรูปภาพยืนยัน:</label>
-                    <input type="file" id="activity-file" accept="image/*">
+                <div class="score-box">
+                    <div class="num" id="user-count">0</div>
+                    <div class="lbl">📋 ครั้งที่ส่ง</div>
                 </div>
-                <button class="btn btn-success" style="width: 100%; justify-content: center; padding: 12px; font-size: 16px;" onclick="submitParticipation()">
-                    <i class="fa-solid fa-paper-plane"></i> ส่งผลงาน
-                </button>
-                <div id="upload-msg" style="margin-top: 10px; font-size: 14px; text-align: center;"></div>
+                <div class="score-box">
+                    <div class="num" id="user-approved">0</div>
+                    <div class="lbl">✅ ผ่านแล้ว</div>
+                </div>
             </div>
         </div>
 
-        <h3 style="margin-bottom: 15px; color: #0f172a; font-size: 18px;"><i class="fa-solid fa-clock-rotate-left"></i> ประวัติการเข้าร่วมกิจกรรมของฉัน</h3>
-        <div id="participation-history">
-            <div style="text-align: center; padding: 30px; color: #64748b; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
-                กำลังโหลดประวัติ...
+        <!-- Upload Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-circle" style="background:#dcfce7; color:#16a34a;">
+                    <i class="fa-solid fa-camera"></i>
+                </div>
+                ส่งภาพกิจกรรม / ยืนยันการเข้าร่วม
+            </div>
+            <div class="card-body">
+                <div id="today-alert" style="display:none;"></div>
+                <div id="upload-section" style="display:none;">
+                    <div class="upload-zone">
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-list-check" style="color:#0284c7;"></i> เลือกกิจกรรมที่คุณต้องการส่งภาพ:</label>
+                            <select id="activity-select"></select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                             <label><i class="fa-solid fa-image" style="color:#0284c7;"></i> รูปภาพยืนยันการเข้าร่วม:</label>
+                             <input type="file" id="activity-file" accept="image/*" onchange="previewImage(this)">
+                             <div id="img-preview-box" style="display:none;margin-top:10px;">
+                                 <img id="img-preview" style="max-width:100%;max-height:200px;border-radius:10px;border:2px solid #e2e8f0;object-fit:cover;">
+                                 <div id="img-preview-info" style="font-size:12px;color:#64748b;margin-top:6px;"></div>
+                             </div>
+                         </div>
+                    </div>
+                    <button class="btn-submit-work" style="margin-top:16px;" onclick="submitParticipation()">
+                        <i class="fa-solid fa-paper-plane"></i> ส่งผลงาน
+                    </button>
+                    <div id="upload-msg"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-circle" style="background:#eff6ff; color:#0284c7;">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                ประวัติการเข้าร่วมกิจกรรม
+            </div>
+            <div id="participation-history">
+                <div class="empty-state">
+                    <div><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    <div>กำลังโหลด...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-circle" style="background:#fef2f2; color:#ef4444;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                ความปลอดภัย (เปลี่ยนรหัสผ่าน)
+            </div>
+            <div class="card-body" style="padding: 22px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:6px; display:block;">รหัสผ่านปัจจุบัน</label>
+                        <input type="password" id="cp-current" placeholder="••••••••" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-family:inherit;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:6px; display:block;">รหัสผ่านใหม่</label>
+                        <input type="password" id="cp-new" placeholder="••••••••" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-family:inherit;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:6px; display:block;">ยืนยันรหัสผ่านใหม่</label>
+                        <input type="password" id="cp-confirm" placeholder="••••••••" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-family:inherit;">
+                    </div>
+                </div>
+                <button class="btn-submit-work" style="margin-top:0; background:#1e293b;" onclick="changePassword()">
+                    <i class="fa-solid fa-key"></i> บันทึกรหัสผ่านใหม่
+                </button>
+            </div>
+        </div>
+
+        <!-- My Registrations Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-circle" style="background:#f0f9ff; color:#0284c7;">
+                    <i class="fa-solid fa-bookmark"></i>
+                </div>
+                การจองกิจกรรมของฉัน
+            </div>
+            <div id="my-registrations-container">
+                <div class="empty-state">
+                    <div><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    <div>กำลังโหลด...</div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Shared Toast container is handled by ui-shared.js -->
+
     <script>
+        const h = (s) => s ? s.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : "";
+        const j = (s) => s ? s.toString().replace(/'/g, "\\'").replace(/"/g, "\\\"") : "";
+
         let currentUser = null;
         let todayISODate = "";
-        let todayThaiDate = "";
-        const thaiMonthsFull = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-        const thaiMonthsAbbr = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const thaiMonthsFull = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+        const thaiMonthsAbbr = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
-        async function initProfile() {
+        async function loadMyRegistrations() {
+            const container = document.getElementById('my-registrations-container');
             try {
-                const resMe = await fetch('/api/me');
-                if (!resMe.ok) {
-                    window.location.href = '/login';
+                const res = await fetch('/api/my/registrations');
+                const data = await res.json();
+                if (!Array.isArray(data) || !data.length) {
+                    container.innerHTML = '<div class="empty-state"><div><i class="fa-solid fa-bookmark" style="font-size:28px;opacity:0.3;"></i></div><div>ยังไม่ได้จองกิจกรรมใดๆ</div></div>';
                     return;
                 }
-                const dataMe = await resMe.json();
-                currentUser = dataMe.user;
+                const statusMap = {
+                    confirmed: { label: '✅ ยืนยันแล้ว', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+                    pending:   { label: '⏳ รอยืนยัน', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+                    cancelled: { label: '❌ ยกเลิกแล้ว', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' }
+                };
+                // Sort: newest first
+                data.sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||''));
+                let html = '<div style="display:flex;flex-direction:column;gap:12px;padding:16px;">';
+                data.forEach(r => {
+                    const s = statusMap[r.status] || statusMap.pending;
+                    const dateStr = r.timestamp ? r.timestamp.split('T')[0] : '-';
+                    const canUpload = r.status === 'confirmed';
+                    html += `
+                    <div style="background:${s.bg};border:1px solid ${s.border};border-radius:12px;padding:14px 16px;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+                            <div style="flex:1;">
+                                <div style="font-weight:700;font-size:15px;color:#0f172a;margin-bottom:4px;">${h(r.event_title)}</div>
+                                <div style="font-size:12px;color:#64748b;">
+                                    <i class="fa-solid fa-calendar-days" style="margin-right:4px;"></i>${h(r.event_date)}
+                                    &nbsp;&nbsp;<i class="fa-solid fa-clock" style="margin-right:4px;"></i>จองวันที่: ${h(dateStr)}
+                                </div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                                <span style="background:white;color:${s.color};border:1px solid ${s.border};padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;">${h(s.label)}</span>
+                                <div style="display:flex; gap: 4px;">
+                                    ${canUpload ? `<button onclick="prepareUpload('${j(r.event_id)}', '${j(r.event_title)}', '${j(r.event_date)}')"
+                                        style="font-size:11px;background:#16a34a;border:none;color:white;padding:4px 12px;border-radius:8px;cursor:pointer;font-family:Kanit,sans-serif;font-weight:600;">
+                                        <i class="fa-solid fa-upload"></i> อัปโหลดหลักฐาน
+                                    </button>` : ''}
+                                    ${r.status !== 'cancelled' ? `<button onclick="cancelMyReg('${j(r.id)}')"
+                                        style="font-size:11px;background:none;border:1px solid #fca5a5;color:#dc2626;padding:3px 10px;border-radius:8px;cursor:pointer;font-family:Kanit,sans-serif;">
+                                        <i class="fa-solid fa-xmark"></i> ยกเลิก
+                                    </button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
                 
-                if (currentUser.role !== 'student') {
-                    window.location.href = '/';
-                    return;
-                }
-                
-                document.getElementById('user-name').textContent = currentUser.name;
-                document.getElementById('user-id').textContent = currentUser.username; // Note: API might not return this, we might need it.
-                // Fetch events
-                const resEvt = await fetch('/api/events');
-                const allEvents = await resEvt.json();
-                
-                checkTodayActivities(allEvents);
-                fetchStudentHistory(allEvents);
-                
+                // Also update the main upload dropdown
+                updateUploadDropdown(data);
             } catch(e) {
-                console.error(e);
+                container.innerHTML = '<div class="empty-state"><div>ไม่สามารถโหลดข้อมูลได้</div></div>';
             }
         }
-        
-        function checkTodayActivities(allEvents) {
-            const today = new Date();
-            const offset = today.getTimezoneOffset() * 60000;
-            todayISODate = (new Date(today - offset)).toISOString().split('T')[0];
-            
-            let [filterY, filterM, filterD] = todayISODate.split('-');
-            filterY = parseInt(filterY) + 543;
-            
-            const todayEvents = allEvents.filter(e => {
-                const dateStr = e.date;
-                if (!dateStr) return false;
-                let isRange = dateStr.includes('-');
-                let parts = isRange ? dateStr.split('-') : [dateStr];
-                
-                const extractDate = (str) => {
-                    let day = null, month = null, year = null;
-                    let dayMatch = str.match(/\b(\d{1,2})\b/);
-                    if (dayMatch && parseInt(dayMatch[1]) <= 31) day = parseInt(dayMatch[1]);
-                    
-                    let yearMatch = str.match(/\b(25\d{2}|\d{2})\b/);
-                    if (yearMatch) {
-                        let y = parseInt(yearMatch[1]);
-                        year = y > 2500 ? y : y + 2500;
-                    }
-                    
-                    for (let i = 0; i < thaiMonthsAbbr.length; i++) {
-                        if (str.includes(thaiMonthsAbbr[i]) || str.includes(thaiMonthsFull[i])) {
-                            month = i + 1;
-                            break;
-                        }
-                    }
-                    return { day, month, year };
-                };
 
-                let start = extractDate(parts[0]);
-                let end = isRange ? extractDate(parts[1]) : null;
-                
-                if (isRange && end) {
-                    if (start.month === null) start.month = end.month;
-                    if (start.year === null) start.year = end.year;
-                    if (end.year === null) end.year = start.year;
-                }
-
-                if (start.year === null) start.year = filterY;
-                
-                if (start.day === parseInt(filterD) && start.month === parseInt(filterM) && start.year === filterY) {
-                    return true;
-                }
-                return false;
+        async function cancelMyReg(regId) {
+            if (!confirm('ยืนยันการยกเลิกการจอง?')) return;
+            const res = await fetch(`/api/registrations/${regId}/status`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({status: 'cancelled'})
             });
-            
-            const alertBox = document.getElementById('today-alert');
-            const uploadSec = document.getElementById('upload-section');
+            if (res.ok) { 
+                loadMyRegistrations(); 
+                toast('\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e01\u0e32\u0e23\u0e08\u0e2d\u0e07\u0e41\u0e25\u0e49\u0e27', 'info');
+            }
+            else { toast('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48', 'error'); }
+        }
+
+
+        function prepareUpload(eventId, eventTitle, eventDate) {
             const select = document.getElementById('activity-select');
             
-            if (todayEvents.length === 0) {
-                alertBox.className = 'alert alert-warning';
-                alertBox.innerHTML = `<strong>ไม่มีกิจกรรมจัดขึ้นในวันนี้ (${todayISODate})</strong><br>ยังไม่มีกิจกรรมที่เปิดให้ส่งภาพเข้าร่วมในวันนี้ หากมีข้อผิดพลาดกรุณาติดต่อสาขาวิชา`;
-                alertBox.style.display = 'block';
+            // Ensure the event is in the select
+            let opt = Array.from(select.options).find(o => o.value === eventId);
+            if (opt) {
+                select.value = eventId;
+            }
+            
+            // Store the event date to form
+            todayISODate = eventDate;
+
+            // Scroll to upload section
+            document.querySelector('.card:nth-of-type(1)').scrollIntoView({ behavior: 'smooth' });
+            
+            // Visual feedback
+            const uploadZone = document.querySelector('.upload-zone');
+            uploadZone.style.borderColor = '#16a34a';
+            setTimeout(() => uploadZone.style.borderColor = '#cbd5e1', 1000);
+        }
+
+        function updateUploadDropdown(registrations) {
+            const select = document.getElementById('activity-select');
+            const uploadSec = document.getElementById('upload-section');
+            const alertBox = document.getElementById('today-alert');
+
+            const confirmedRegs = registrations.filter(r => r.status === 'confirmed');
+
+            if (confirmedRegs.length === 0) {
+                alertBox.className = 'alert alert-info';
+                alertBox.innerHTML = `<i class="fa-solid fa-circle-info"></i><div><strong>ยังไม่มีกิจกรรมที่ยืนยันการจอง</strong><br><span style="font-size:13px;">กรุณาจองกิจกรรมในหน้าหลักและรอการยืนยันก่อนส่งผลงาน</span></div>`;
+                alertBox.style.display = 'flex';
                 uploadSec.style.display = 'none';
             } else {
                 alertBox.style.display = 'none';
                 uploadSec.style.display = 'block';
-                
-                select.innerHTML = '';
-                todayEvents.forEach(e => {
-                    select.innerHTML += `<option value="${e.id}">${e.title}</option>`;
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">-- เลือกกิจกรรมที่คุณจองไว้ --</option>';
+                confirmedRegs.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.event_id;
+                    opt.textContent = r.event_title;
+                    opt.setAttribute('data-date', r.event_date);
+                    select.appendChild(opt);
                 });
+                if (currentVal) select.value = currentVal;
+                
+                select.onchange = () => {
+                    const selected = select.options[select.selectedIndex];
+                    todayISODate = selected.getAttribute('data-date') || "";
+                };
             }
         }
-        
+
+        async function initProfile() {
+            try {
+                const resMe = await fetch('/api/me');
+                if (!resMe.ok) { window.location.href = '/login'; return; }
+                const dataMe = await resMe.json();
+                currentUser = dataMe.user;
+                if (currentUser.role !== 'student') { window.location.href = '/'; return; }
+
+                document.getElementById('user-name').textContent = currentUser.name || 'ไม่ระบุชื่อ';
+                const studentId = currentUser.username || currentUser.student_id || currentUser.id || '-';
+                document.getElementById('user-id').textContent = studentId;
+                document.getElementById('user-major').textContent = currentUser.major || currentUser.branch || '-';
+                document.getElementById('user-year').textContent = currentUser.year ? 'ชั้นปีที่ ' + currentUser.year : 'ไม่ระบุชั้นปี';
+
+                const resEvt = await fetch('/api/events');
+                const rawEvtData = await resEvt.json();
+                // Handle paginated or flat response
+                const allEvents = Array.isArray(rawEvtData) ? rawEvtData : (rawEvtData.events || []);
+                fetchStudentHistory(allEvents);
+                loadMyRegistrations();
+            } catch(e) { console.error(e); }
+        }
+
         async function submitParticipation() {
             const select = document.getElementById('activity-select');
             const fileInput = document.getElementById('activity-file');
-            const msg = document.getElementById('upload-msg');
-            
-            if (!select.value) {
-                msg.textContent = 'กรุณาเลือกกิจกรรม';
-                msg.style.color = '#dc2626';
-                return;
-            }
-            if (!fileInput.files || fileInput.files.length === 0) {
-                msg.textContent = 'กรุณาอัปโหลดรูปภาพ';
-                msg.style.color = '#dc2626';
-                return;
-            }
-            
+            const msgEl = document.getElementById('upload-msg');
+            const btn = document.querySelector('#upload-section button');
+
+            const showUploadMsg = (text, type) => {
+                msgEl.textContent = text;
+                msgEl.className = 'visible ' + type;
+            };
+
+            if (!select.value) { showUploadMsg('กรุณาเลือกกิจกรรม', 'error'); return; }
+            if (!fileInput.files || fileInput.files.length === 0) { showUploadMsg('กรุณาอัปโหลดรูปภาพ', 'error'); return; }
+
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             formData.append('event_id', select.value);
             formData.append('event_title', select.options[select.selectedIndex].text);
             formData.append('event_date', todayISODate);
-            
-            msg.textContent = 'กำลังส่งข้อมูล...';
-            msg.style.color = '#0284c7';
-            
+
+            showUploadMsg('กำลังส่งข้อมูล...', 'loading');
             try {
-                const res = await fetch('/api/student/participate', {
-                    method: 'POST',
-                    body: formData
-                });
+                const res = await fetch('/api/student/participate', { method: 'POST', body: formData });
                 const data = await res.json();
-                
                 if (res.ok) {
-                    msg.textContent = 'ส่งผลงานสำเร็จ!';
-                    msg.style.color = '#16a34a';
+                    toast('ส่งข้อมูลสำเร็จ! ระบบจะตรวจสอบผลงานของคุณต่อไป', 'success');
                     fileInput.value = '';
-                    fetchStudentHistory(window.lastEvents); // Refresh
+                    document.getElementById('img-preview-box').style.display = 'none';
+                    showUploadMsg('ส่งเรียบร้อยแล้ว', 'success');
+                    fetchStudentHistory(); // Refresh history
                 } else {
-                    msg.textContent = 'ข้อผิดพลาด: ' + data.message;
-                    msg.style.color = '#dc2626';
+                    toast(data.message || 'เกิดข้อผิดพลาดในการส่งข้อมูล', 'error');
+                    showUploadMsg(data.message || 'เกิดข้อผิดพลาด', 'error');
                 }
             } catch(e) {
-                msg.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
-                msg.style.color = '#dc2626';
+                showUploadMsg('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
             }
         }
-        
+
         async function fetchStudentHistory(allEvents) {
             if (allEvents) window.lastEvents = allEvents;
             else allEvents = window.lastEvents || [];
-            
+
             try {
                 const res = await fetch('/api/student/history');
                 const history = await res.json();
                 const container = document.getElementById('participation-history');
-                
-                let totalScore = 0;
-                
+
                 if (history.length === 0) {
-                    container.innerHTML = '<div style="text-align: center; padding: 30px; color: #64748b; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">คุณยังไม่มีประวัติการส่งภาพกิจกรรม</div>';
+                    container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox"></i><div>คุณยังไม่มีประวัติการส่งภาพกิจกรรม</div></div>`;
                     return;
                 }
-                
+
+                let totalScore = 0, totalCount = history.length, approvedCount = 0;
                 container.innerHTML = '';
-                history.reverse().forEach(h => {
-                    const d = new Date(h.event_date);
-                    const dateStr = `${d.getDate()} ${thaiMonthsAbbr[d.getMonth()]} ${(d.getFullYear() + 543) % 100}`;
+
+                [...history].reverse().forEach(item => {
+                    // Fix Date display: fallback to event_date or today
+                    // Use the date string from database directly if it's already in Thai format
+                    let dateStr = item.event_date || "-";
                     
-                    let statusHtml = '';
-                    let points = 0;
-                    
-                    // Find event to get points
-                    const eventData = allEvents.find(e => e.id === h.event_id);
-                    if (eventData && eventData.score) points = parseInt(eventData.score);
-                    
-                    if (h.status === 'approved') {
-                        statusHtml = `<span class="status-badge" style="background:#dcfce7; color:#166534;"><i class="fa-solid fa-check-circle"></i> เข้าร่วมแล้ว (+${points} คะแนน)</span>`;
-                        totalScore += points;
-                    } else if (h.status === 'rejected') {
-                        statusHtml = '<span class="status-badge" style="background:#fee2e2; color:#b91c1c;"><i class="fa-solid fa-xmark-circle"></i> ไม่ผ่าน / ไม่อนุมัติ</span>';
-                    } else {
-                        statusHtml = '<span class="status-badge" style="background:#fef9c3; color:#854d0e;"><i class="fa-solid fa-clock"></i> รอตรวจสอบ</span>';
+                    // Fallback formatting for ISO dates if needed
+                    if (item.event_date && item.event_date.includes('-') && !item.event_date.includes(' ')) {
+                        try {
+                            const d = new Date(item.event_date);
+                            if (!isNaN(d.getTime())) {
+                                dateStr = `${d.getDate()} ${thaiMonthsAbbr[d.getMonth()]} ${(d.getFullYear() + 543)}`;
+                            }
+                        } catch(e) {}
                     }
-                    
+
+                    const eventData = allEvents.find(e => e.id === item.event_id);
+                    // Priority: 1. Score in participation record, 2. Score in event record, 3. Zero
+                    let points = item.score !== undefined ? parseInt(item.score) : ((eventData && eventData.score) ? parseInt(eventData.score) : 0);
+
+                    let statusHtml = '';
+                    if (item.status === 'approved') {
+                        statusHtml = `<span class="status-badge badge-approved"><i class="fa-solid fa-check-circle"></i> ผ่านแล้ว (+${points} คะแนน)</span>`;
+                        totalScore += points;
+                        approvedCount++;
+                    } else if (item.status === 'rejected') {
+                        statusHtml = `<span class="status-badge badge-rejected"><i class="fa-solid fa-xmark-circle"></i> ไม่ผ่าน</span>`;
+                    } else {
+                        statusHtml = `<span class="status-badge badge-pending"><i class="fa-solid fa-clock"></i> รอตรวจสอบ</span>`;
+                    }
+
                     let categoryBadge = '';
                     if (eventData && eventData.category === 'กิจกรรมมหาวิทยาลัย') {
-                        categoryBadge = `<span style="font-size: 10px; background: #dc2626; color: white; padding: 1px 6px; border-radius: 4px; margin-bottom: 4px; display: inline-block; font-weight: bold;">กิจกรรมมหาวิทยาลัย</span><br>`;
+                        categoryBadge = `<span class="cat-badge">มหาวิทยาลัย</span>`;
+                    }
+
+                    let certBtn = '';
+                    if (item.status === 'approved') {
+                        certBtn = `
+                        <a href="/certificate?id=${j(item.id)}" target="_blank" class="status-badge" style="background:#fffbeb; color:#996515; border:1px solid #fde68a; text-decoration:none; margin-left:8px;">
+                            <i class="fa-solid fa-certificate"></i> รับเกียรติบัตร
+                        </a>`;
                     }
 
                     container.innerHTML += `
-                        <div style="background: white; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; display: flex; gap: 15px; align-items: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                            <img src="${h.image_url}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #f1f5f9;">
-                            <div style="flex: 1;">
-                                <div style="font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 5px;">
-                                    ${categoryBadge}${h.event_title}
+                        <div class="history-item">
+                            <img src="${h(item.image_url)}" class="history-img" onclick="window.open('${j(item.image_url)}','_blank')" title="คลิกเพื่อดูรูปเต็ม">
+                            <div class="history-info">
+                                <div class="history-title">${categoryBadge}${h(item.event_title)}</div>
+                                <div class="history-date"><i class="fa-solid fa-calendar-day"></i> ${h(dateStr)}</div>
+                                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                                    ${statusHtml}
+                                    ${certBtn}
                                 </div>
-                                <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
-                                    <i class="fa-solid fa-calendar-day"></i> ${dateStr}
-                                </div>
-                                ${statusHtml}
                             </div>
                         </div>
                     `;
                 });
-                
+
+                // Update stats boxes
                 document.getElementById('user-score').textContent = totalScore;
+                document.getElementById('user-count').textContent = totalCount;
+                document.getElementById('user-approved').textContent = approvedCount;
+
             } catch(e) { console.error(e); }
+        }
+
+        function previewImage(input) {
+            const box = document.getElementById('img-preview-box');
+            const img = document.getElementById('img-preview');
+            const info = document.getElementById('img-preview-info');
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+                const reader = new FileReader();
+                reader.onload = e => { img.src = e.target.result; };
+                reader.readAsDataURL(file);
+                box.style.display = 'block';
+                const sizeColor = file.size > 5 * 1024 * 1024 ? '#f59e0b' : '#16a34a';
+                const sizeWarn = file.size > 5 * 1024 * 1024 ? ' ⚠️ ไฟล์ใหญ่เกิน 5MB' : '';
+                info.innerHTML = `<i class="fa-solid fa-file-image" style="color:${sizeColor};"></i> ${file.name} — <span style="color:${sizeColor};font-weight:600;">${sizeMB} MB</span>${sizeWarn}`;
+            } else {
+                box.style.display = 'none';
+            }
+        }
+
+        async function doLogout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/login';
+        }
+
+        async function changePassword() {
+            const current = document.getElementById('cp-current').value;
+            const newPw = document.getElementById('cp-new').value;
+            const confirm = document.getElementById('cp-confirm').value;
+            
+            if (!current || !newPw || !confirm) {
+                toast('กรุณากรอกข้อมูลให้ครบถ้วน', 'warning');
+                return;
+            }
+            if (newPw !== confirm) {
+                toast('รหัสผ่านใหม่ไม่ตรงกัน', 'error');
+                return;
+            }
+            if (newPw.length < 6) {
+                toast('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร', 'warning');
+                return;
+            }
+            
+            const btn = document.querySelector('button[onclick="changePassword()"]');
+            btn.disabled = true;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+            
+            try {
+                const res = await fetch('/api/user/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword: current, newPassword: newPw })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    toast('เปลี่ยนรหัสผ่านสำเร็จแล้ว', 'success');
+                    document.getElementById('cp-current').value = '';
+                    document.getElementById('cp-new').value = '';
+                    document.getElementById('cp-confirm').value = '';
+                } else {
+                    toast(data.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้', 'error');
+                }
+            } catch (e) {
+                toast('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
 
         async function shareWebsite() {
@@ -329,16 +943,20 @@
                 url: window.location.origin
             };
             try {
-                if (navigator.share) {
-                    await navigator.share(shareData);
-                } else {
+                if (navigator.share) { await navigator.share(shareData); }
+                else {
                     await navigator.clipboard.writeText(window.location.origin);
                     alert('คัดลอกลิงก์เว็บไซต์เรียบร้อยแล้ว!');
                 }
-            } catch (err) { console.log('Error sharing:', err); }
+            } catch(err) { console.log('Error sharing:', err); }
         }
 
         window.onload = initProfile;
+
+        // Heartbeat to keep session alive and inform server we are still here
+        setInterval(() => {
+            fetch('/api/me').catch(() => {});
+        }, 20000);
     </script>
 </body>
 </html>

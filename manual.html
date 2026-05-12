@@ -6,6 +6,7 @@
     <title>คู่มือการใช้งานระบบปฏิทินกิจกรรมฉบับละเอียด - University Activity System</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="theme-loader.js"></script>
     <style>
         :root {
             --primary: #facc15;
@@ -14,6 +15,16 @@
             --accent: #0284c7;
             --text: #334155;
             --bg: #f1f5f9;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+        }
+        html.dark-theme body {
+            --secondary: #0f172a;
+            --accent: #0ea5e9;
+            --text: #f8fafc;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --border: #334155;
         }
         body {
             font-family: 'Kanit', sans-serif;
@@ -39,10 +50,11 @@
         .container {
             max-width: 1000px;
             margin: 40px auto;
-            background: white;
+            background: var(--card-bg);
             padding: 80px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.1);
             border-radius: 0px; /* Traditional PDF look */
+            transition: background 0.3s;
         }
         header {
             text-align: center;
@@ -164,7 +176,8 @@
 
     <div class="no-print-bar">
         <span><i class="fa-solid fa-file-pdf"></i> คู่มือนี้ออกแบบมาเพื่อการบันทึกเป็น PDF</span>
-        <button class="print-btn" onclick="window.print()">กดปุ่มนี้เพื่อบันทึกเป็น PDF</button>
+        <button class="print-btn" onclick="window.print()" style="margin-right:10px;">บันทึกเป็น PDF</button>
+        <button class="print-btn" onclick="toggleTheme()" style="background:#475569; color:white;"><i id="theme-toggle-icon" class="fa-solid fa-moon"></i> เปลี่ยนธีม</button>
     </div>
 
     <div class="container">
