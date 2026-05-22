@@ -9,6 +9,7 @@ window.toggleTheme = function() {
     const isDark = document.documentElement.classList.toggle('dark-theme');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     updateThemeIcon();
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { isDark } }));
 };
 
 function updateThemeIcon() {

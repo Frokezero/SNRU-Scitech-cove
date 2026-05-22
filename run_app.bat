@@ -2,7 +2,7 @@
 echo Starting Activity Calendar Server...
 echo Please wait 2 seconds...
 
-start "Server" python app.py
+start "Server" .venv\Scripts\python.exe app.py
 
 timeout /t 2 /nobreak >nul
 

@@ -44,7 +44,7 @@
                 </button>
 
                 <!-- Desktop Notification -->
-                <div class="notification-container desktop-only" id="notif-container-desktop" style="display: none;">
+                <div class="notification-container desktop-only" id="notif-container-desktop" style="display: none !important;">
                     <button class="nav-btn nav-btn-ghost" onclick="toggleNotifications(event)" title="การแจ้งเตือน">
                         <i class="fa-solid fa-bell"></i>
                         <span class="notif-badge" style="display: none;">0</span>
@@ -65,7 +65,7 @@
             </div>
 
             <!-- Mobile Notification (Button only here, dropdown at root) -->
-            <div class="notification-container mobile-only" id="notif-container-mobile" style="display: none;">
+            <div class="notification-container mobile-only" id="notif-container-mobile" style="display: none !important;">
                 <button class="nav-btn nav-btn-ghost" onclick="toggleNotifications(event)" title="การแจ้งเตือน">
                     <i class="fa-solid fa-bell"></i>
                     <span class="notif-badge" style="display: none;">0</span>
@@ -80,9 +80,9 @@
     </nav>
 
     <!-- Notification Backdrops & Mobile Dropdown (Moved to root for stacking context) -->
-    <div class="notif-backdrop" id="notif-backdrop" onclick="closeNotifications(event)"></div>
+    <div class="notif-backdrop" id="notif-backdrop" onclick="closeNotifications(event)" style="display: none !important;"></div>
     
-    <div class="notif-dropdown mobile-only" id="notif-dropdown-mobile">
+    <div class="notif-dropdown mobile-only" id="notif-dropdown-mobile" style="display: none !important;">
         <div class="notif-handle"></div>
         <div class="notif-header">
             <h3><i class="fa-solid fa-bell" style="color:#0284c7;font-size:14px;"></i> การแจ้งเตือน</h3>
@@ -195,6 +195,8 @@
             </div>
             <div class="footer-links">
                 <span>Sakon Nakhon Rajabhat University</span>
+                <a href="https://www.facebook.com/page.sci.snru" target="_blank" title="Faculty Facebook Page"><i class="fa-brands fa-facebook" style="color: #1877F2; font-size: 16px;"></i> คณะวิทยาศาสตร์และเทคโนโลยี</a>
+                <a href="https://www.facebook.com/stuo.sci.snru" target="_blank" title="Student Union Facebook Page"><i class="fa-brands fa-facebook" style="color: #1877F2; font-size: 16px;"></i> สโมสรนักศึกษา</a>
                 <a href="/admin"><i class="fa-solid fa-lock"></i> ระบบจัดการ</a>
             </div>
         </div>
@@ -251,7 +253,7 @@
 
     <!-- ===== SCRIPTS ===== -->
     <!-- Activity Detail Modal -->
-    <div id="activity-detail-modal" class="modal">
+    <div id="activity-detail-modal" class="modal" style="display:none;">
         <div class="modal-content activity-detail-content">
             <button class="close-modal" onclick="closeActivityDetail()">&times;</button>
             <div id="detail-hero" class="detail-hero"></div>
@@ -288,6 +290,22 @@
             </div>
         </div>
     </div>
+
+    <!-- ===== REGISTRATION CONFIRMATION MODAL ===== -->
+    <div id="reg-confirm-modal" class="modal">
+        <div class="modal-content" style="max-width: 520px; padding: 24px;">
+            <button class="close-modal" onclick="closeRegisterConfirm()">&times;</button>
+            <div style="padding-top: 10px;">
+                <h2 style="margin-bottom: 12px;">ยืนยันการจองกิจกรรม</h2>
+                <p style="color:#475569; line-height:1.7;">คุณต้องการจองกิจกรรม <strong id="reg-title">-</strong> ใช่หรือไม่?</p>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
+                    <button class="nav-btn nav-btn-outline" type="button" onclick="closeRegisterConfirm()">ยกเลิก</button>
+                    <button id="reg-confirm-btn" class="nav-btn nav-btn-blue" type="button">ยืนยันการจอง</button>
+                </div>
+            </div>
+        </div>
+    <!-- Reusable Calendar Popover Tooltip -->
+    <div id="calendar-popover" class="calendar-popover"></div>
 
     <script src="script.js?v=1.1"></script>
 </body>

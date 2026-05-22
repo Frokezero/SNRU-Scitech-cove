@@ -45,6 +45,11 @@ html.dark-theme body {
 
 /* ===== RESET ===== */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body, .top-nav, .event-card, .card-main, .modal-content, .detail-stat-box, table, th, td, tr, input, select, textarea, .nav-btn, .carousel-slide {
+    transition: background 0.4s ease, background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+}
+
 body { 
     font-family: 'Kanit', sans-serif; 
     background: var(--bg-main); 
@@ -140,9 +145,9 @@ body {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.18);
     z-index: 1090;
-    backdrop-filter: blur(4px);
+    pointer-events: auto;
 }
 .notif-backdrop.active { display: block; }
 
@@ -591,6 +596,7 @@ html.dark-theme .mobile-menu-toggle:hover { background: #334155; color: white; }
     margin-bottom: 14px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -681,6 +687,61 @@ html.dark-theme .mobile-menu-toggle:hover { background: #334155; color: white; }
 .cards-container.list-view .card-date-side { width: 100px; height: auto; }
 .cards-container.list-view .card-actions { align-items: center; padding-top: 20px; }
 
+/* ===== EMPTY STATE (No Events) ===== */
+.no-events {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 32px;
+    text-align: center;
+    background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #f0f9ff 100%);
+    border-radius: 24px;
+    border: 2px dashed #bae6fd;
+    margin: 8px 0 32px;
+    animation: fadeInUp 0.4s ease both;
+}
+.no-events-icon {
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(2, 132, 199, 0.3);
+    animation: pulse 2.5s infinite;
+}
+.no-events-icon i {
+    font-size: 36px;
+    color: white;
+}
+.no-events h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+.no-events p {
+    font-size: 14px;
+    color: #64748b;
+    max-width: 300px;
+    line-height: 1.6;
+    margin: 0;
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 8px 32px rgba(2,132,199,0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 12px 40px rgba(2,132,199,0.5); }
+}
+html.dark-theme .no-events {
+    background: linear-gradient(135deg, #0f172a 0%, #0c1a2e 50%, #0f172a 100%);
+    border-color: #1e3a5f;
+}
+html.dark-theme .no-events h3 { color: #f1f5f9; }
+html.dark-theme .no-events p { color: #94a3b8; }
+
 
 /* ===== FOOTER ===== */
 .site-footer {
@@ -696,6 +757,60 @@ html.dark-theme .mobile-menu-toggle:hover { background: #334155; color: white; }
 .footer-links { display: flex; align-items: center; gap: 16px; font-size: 13px; }
 .footer-links a { color: #facc15; text-decoration: none; display: flex; align-items: center; gap: 5px; }
 .footer-links a:hover { text-decoration: underline; }
+
+/* ===== MODAL OVERLAY BASE ===== */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+}
+.modal.open {
+    display: flex;
+    animation: fadeIn 0.25s ease both;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.modal-content {
+    background: white;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+    animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+html.dark-theme .modal-content { background: #1e293b; }
+@keyframes slideUp {
+    from { transform: translateY(40px) scale(0.96); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.close-modal {
+    position: absolute;
+    top: 14px; right: 14px;
+    z-index: 10;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.15);
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+    backdrop-filter: blur(4px);
+}
+.close-modal:hover { background: rgba(255,255,255,0.3); }
 
 /* Activity Detail Modal Specifics */
 .activity-detail-content {
@@ -1073,4 +1188,136 @@ html.dark-theme .detail-stat-box { background: rgba(255,255,255,0.03); border-co
     50% { transform: scale(1.03); }
     70% { box-shadow: 0 0 0 6px rgba(253, 224, 71, 0); }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(253, 224, 71, 0); }
+}
+
+/* Dark Mode overrides for Calendar View */
+html.dark-theme #calendar-view {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+html.dark-theme #calendar-month-name {
+    color: var(--primary);
+}
+html.dark-theme .calendar-grid {
+    background: var(--border-color);
+    border-color: var(--border-color);
+}
+html.dark-theme .cal-day-header {
+    background: #1e293b;
+    color: #94a3b8;
+}
+html.dark-theme .cal-day {
+    background: #0f172a;
+}
+html.dark-theme .cal-day.today {
+    background: rgba(2, 132, 199, 0.15);
+}
+html.dark-theme .cal-day.has-events {
+    background: linear-gradient(135deg, #131e35, #0f172a);
+}
+html.dark-theme .cal-day-num {
+    color: #475569;
+}
+html.dark-theme .cal-day.today .cal-day-num {
+    color: var(--primary);
+}
+
+/* Day cell highlights for days with events */
+.cal-day.has-events {
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    box-shadow: inset 0 0 10px rgba(2, 132, 199, 0.03);
+    cursor: pointer;
+}
+.cal-day.has-events:hover {
+    filter: brightness(0.98);
+}
+html.dark-theme .cal-day.has-events:hover {
+    filter: brightness(1.1);
+}
+
+/* Interactive Popover Tooltip */
+.calendar-popover {
+    display: none;
+    position: absolute;
+    z-index: 1500;
+    width: 280px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
+    transform: scale(0.95);
+    opacity: 0;
+    transition: opacity 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: auto;
+}
+.calendar-popover.active {
+    display: block;
+    transform: scale(1);
+    opacity: 1;
+}
+html.dark-theme .calendar-popover {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: #334155;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+.popover-header {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--primary-dark);
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+html.dark-theme .popover-header {
+    color: var(--primary);
+}
+.popover-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+.popover-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.popover-item:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+html.dark-theme .popover-item {
+    background: #1e293b;
+    border-color: #334155;
+}
+html.dark-theme .popover-item:hover {
+    background: rgba(2, 132, 199, 0.2);
+    border-color: var(--primary);
+}
+.popover-item-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+.popover-item-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.popover-item-meta i {
+    font-size: 9px;
 }

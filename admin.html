@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="theme-loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #0284c7;
@@ -53,6 +54,19 @@
         html.dark-theme .user-card {
             background: rgba(2, 132, 199, 0.1);
             border-color: rgba(2, 132, 199, 0.2);
+        }
+
+        body, .container, .content-card, .btn-group, .modal-content, table, th, td, tr, input, select, textarea, .stat-card, .user-card, .chart-section, .chart-card {
+            transition: background 0.4s ease, background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        html.dark-theme .chart-card {
+            background: #1e293b !important;
+            border-color: #475569 !important;
+        }
+        html.dark-theme .chart-section {
+            background: #1e293b !important;
+            border-color: #475569 !important;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Kanit', sans-serif; }
@@ -423,6 +437,7 @@
                         <a href="/" class="btn btn-outline"><i class="fa-solid fa-calendar-days"></i> ปฏิทิน</a>
                         <button class="btn btn-outline" onclick="shareWebsite()"><i class="fa-solid fa-share-nodes"></i> แชร์เว็บ</button>
                         <a href="/manual.html" class="btn btn-outline" target="_blank"><i class="fa-solid fa-book"></i> คู่มือการใช้งาน</a>
+                        <button class="btn btn-warning" id="admin-backup-btn" style="display:none;" onclick="downloadDatabaseBackup()"><i class="fa-solid fa-file-zipper"></i> สำรองข้อมูล</button>
                         <button class="btn btn-secondary" onclick="logout()"><i class="fa-solid fa-power-off"></i> ออกจากระบบ</button>
                     </div>
                 </div>
@@ -445,7 +460,8 @@
                             <button class="btn btn-success" id="view-works-btn" style="display:none;" onclick="openWorksModal()"><i class="fa-solid fa-clipboard-check"></i> ตรวจผลงาน</button>
                             <span class="notif-badge" id="pending-badge" style="display:none;">0</span>
                         </div>
-                        <button class="btn btn-info" id="view-leaderboard-btn" style="display:none;" onclick="openLeaderboardModal()"><i class="fa-solid fa-medal"></i> Leaderboard</button>
+                        <button class="btn btn-info" id="view-attendance-report-btn" style="display:none;" onclick="openAttendanceReportModal()"><i class="fa-solid fa-file-signature"></i> รายงานการเช็คอิน</button>
+                        <button class="btn btn-outline" id="view-leaderboard-btn" style="display:none;" onclick="openLeaderboardModal()"><i class="fa-solid fa-medal"></i> Leaderboard</button>
                     </div>
                 </div>
             </div>
@@ -456,7 +472,7 @@
             <i class="fa-solid fa-user-shield"></i>
             <div class="details">
                 <span class="label">ผู้ดูแลระบบ</span>
-                <span class="name" id="user-display-name">Loading...</span>
+                <span class="name" id="user-display-name">กำลังโหลด...</span>
             </div>
         </div>
 
@@ -486,12 +502,25 @@
         </div>
 
         <!-- Chart Section (admin only) -->
-        <div class="chart-section" id="chart-section" style="display:none;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-                <h3 style="font-weight:600;font-size:15px;"><i class="fa-solid fa-chart-bar" style="color:var(--primary);"></i> คะแนนรวมต่อสาขาวิชา</h3>
-                <button class="btn btn-outline mini-btn" onclick="loadChartData()"><i class="fa-solid fa-rotate-right"></i> รีเฟรช</button>
+        <div class="chart-section" id="chart-section" style="display:none; background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 20px; padding: 25px; margin-bottom: 30px; box-shadow: var(--shadow-sm);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="font-weight:600;font-size:16px;"><i class="fa-solid fa-chart-pie" style="color:var(--primary); margin-right: 8px;"></i> แผงวิเคราะห์ข้อมูลกิจกรรมเชิงโต้ตอบ (Interactive Analytics Dashboard)</h3>
+                <button class="btn btn-outline mini-btn" onclick="updateDashboardStats()" style="padding: 6px 12px; font-size: 12px;"><i class="fa-solid fa-rotate-right"></i> รีเฟรชข้อมูล</button>
             </div>
-            <canvas id="score-chart" height="220"></canvas>
+            <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div class="chart-card" style="background: white; border: 1px solid var(--slate-200); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; min-height: 320px;">
+                    <h4 style="font-weight:600; font-size:14px; margin-bottom: 15px; color: var(--slate-900);"><i class="fa-solid fa-chart-bar" style="color:var(--primary); margin-right: 6px;"></i> คะแนนรวมสะสมจำแนกตามสาขาวิชา</h4>
+                    <div style="flex: 1; position: relative; height: 100%;">
+                        <canvas id="score-chart" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card" style="background: white; border: 1px solid var(--slate-200); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; min-height: 320px;">
+                    <h4 style="font-weight:600; font-size:14px; margin-bottom: 15px; color: var(--slate-900);"><i class="fa-solid fa-chart-pie" style="color:var(--success); margin-right: 6px;"></i> สัดส่วนสถานะการเข้าร่วมและอนุมัติกิจกรรม</h4>
+                    <div style="flex: 1; position: relative; height: 100%; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="participation-chart" style="max-height: 250px; max-width: 250px;"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Main Content -->
@@ -610,6 +639,18 @@
                 <input type="text" id="event-location" placeholder="เช่น ห้อง SC101, อาคารวิทยาศาสตร์">
             </div>
 
+            <!-- GPS Coordinates -->
+            <div class="form-row" style="display:flex; gap:12px; margin-bottom:16px;">
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label><i class="fa-solid fa-map-pin" style="color:var(--primary);margin-right:4px;"></i>ละติจูด (Latitude)</label>
+                    <input type="number" id="event-latitude" step="any" placeholder="เช่น 17.18994 (พิกัด มรภ.สกลนคร)" style="width:100%;">
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <label><i class="fa-solid fa-map-pin" style="color:var(--primary);margin-right:4px;"></i>ลองจิจูด (Longitude)</label>
+                    <input type="number" id="event-longitude" step="any" placeholder="เช่น 104.09153 (พิกัด มรภ.สกลนคร)" style="width:100%;">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label><i class="fa-solid fa-align-left" style="color:var(--primary);margin-right:4px;"></i>รายละเอียดกิจกรรม</label>
                 <textarea id="event-description" rows="3" placeholder="อธิบายรายละเอียดกิจกรรม..." style="resize:vertical;"></textarea>
@@ -620,7 +661,7 @@
                 <div style="font-weight:600;font-size:13px;color:#0284c7;margin-bottom:12px;">
                     <i class="fa-solid fa-bookmark"></i> การจองกิจกรรม
                 </div>
-                <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
                         <input type="checkbox" id="event-registration-open" style="width:18px;height:18px;accent-color:#0284c7;cursor:pointer;">
                         <span>เปิดรับการจอง</span>
@@ -628,6 +669,16 @@
                     <div style="flex:1;min-width:180px;">
                         <label style="font-size:12px;color:#475569;display:block;margin-bottom:4px;">จำนวนที่นั่งสูงสุด (0 = ไม่จำกัด)</label>
                         <input type="number" id="event-max-participants" min="0" value="0" placeholder="0 = ไม่จำกัด" style="margin:0;">
+                    </div>
+                </div>
+                <div class="form-row" style="display:flex;gap:12px;margin-top:12px;">
+                    <div style="flex:1;">
+                        <label style="font-size:12px;color:#475569;display:block;margin-bottom:4px;">วันเวลาเปิดรับจอง</label>
+                        <input type="datetime-local" id="event-registration-start" style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:12px;color:#475569;display:block;margin-bottom:4px;">วันเวลาปิดรับจอง</label>
+                        <input type="datetime-local" id="event-registration-end" style="width:100%;padding:8px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;">
                     </div>
                 </div>
             </div>
@@ -720,6 +771,94 @@
         </div>
     </div>
 
+    <!-- MODAL: ATTENDANCE REPORT BY MAJOR -->
+    <div class="modal" id="attendance-report-modal">
+        <div class="modal-content" style="max-width: 1050px;">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-file-signature"></i> รายงานตรวจสอบการเข้ากิจกรรมระดับสาขาวิชา</h2>
+                <button class="btn btn-outline mini-btn" onclick="closeAttendanceReportModal()"><i class="fa-solid fa-times"></i></button>
+            </div>
+
+            <!-- Filters Box -->
+            <div style="background: var(--slate-50); padding: 20px; border-radius: 16px; border: 1px solid var(--slate-200); margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+                <div style="flex: 2; min-width: 250px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase;">เลือกกิจกรรม:</label>
+                    <input type="text" id="attendance-event-search" placeholder="🔍 ค้นหาชื่อกิจกรรม..." oninput="populateAttendanceEventsDropdown()" style="width: 100%; margin-top: 5px; margin-bottom: 8px; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; font-size: 13px;">
+                    <select id="attendance-event-select" onchange="fetchAttendanceReport()" style="width: 100%;">
+                        <option value="">-- กรุณาเลือกกิจกรรม --</option>
+                    </select>
+                </div>
+                <div style="flex: 1.5; min-width: 200px;" id="attendance-major-filter-wrapper">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase;">สาขาวิชา:</label>
+                    <select id="attendance-major-select" onchange="fetchAttendanceReport()" style="width: 100%; margin-top: 5px;">
+                        <option value="all">ทุกสาขาวิชา</option>
+                        <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
+                        <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
+                        <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
+                        <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
+                        <option value="สาขาวิชาสถิติ">สาขาวิชาสถิติ</option>
+                        <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
+                        <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ</option>
+                        <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
+                        <option value="สาขาวิชาคหกรรมศาสตร์">สาขาวิชาคหกรรมศาสตร์</option>
+                        <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
+                    </select>
+                </div>
+                <div style="flex: 1.5; min-width: 200px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase;">ค้นหารายชื่อ/รหัส:</label>
+                    <input type="text" id="attendance-search-input" placeholder="พิมพ์เพื่อค้นหา..." oninput="filterAttendanceTable()" style="width: 100%; margin-top: 5px; padding: 10px; border-radius: 10px; border: 1px solid var(--slate-200);">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-success" onclick="exportAttendanceToCSV()"><i class="fa-solid fa-file-excel"></i> ส่งออก Excel</button>
+                    <button class="btn btn-primary" onclick="printAttendanceReport()"><i class="fa-solid fa-print"></i> พิมพ์รายงาน (A4)</button>
+                </div>
+            </div>
+
+            <!-- Stats Analytics Cards -->
+            <div id="attendance-stats-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                <div class="stat-card blue" style="padding: 15px; border-radius: 12px; text-align: center; background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.2);">
+                    <div style="font-size: 12px; color: var(--slate-400); font-weight: 600;">นักศึกษาทั้งหมด</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--primary); margin-top: 5px;" id="attendance-stat-total">0</div>
+                </div>
+                <div class="stat-card green" style="padding: 15px; border-radius: 12px; text-align: center; background: rgba(22, 163, 74, 0.08); border: 1px solid rgba(22, 163, 74, 0.2);">
+                    <div style="font-size: 12px; color: var(--slate-400); font-weight: 600;">เช็คอินสำเร็จ</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--success); margin-top: 5px;" id="attendance-stat-approved">0</div>
+                </div>
+                <div class="stat-card amber" style="padding: 15px; border-radius: 12px; text-align: center; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2);">
+                    <div style="font-size: 12px; color: var(--slate-400); font-weight: 600;">รอตรวจสอบ</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--warning); margin-top: 5px;" id="attendance-stat-pending">0</div>
+                </div>
+                <div class="stat-card info" style="padding: 15px; border-radius: 12px; text-align: center; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2);">
+                    <div style="font-size: 12px; color: var(--slate-400); font-weight: 600;">จองสิทธิ์แต่ยังไม่เข้า</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--info); margin-top: 5px;" id="attendance-stat-registered">0</div>
+                </div>
+                <div class="stat-card red" style="padding: 15px; border-radius: 12px; text-align: center; background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.2);">
+                    <div style="font-size: 12px; color: var(--slate-400); font-weight: 600;">ไม่ได้เข้าร่วม</div>
+                    <div style="font-size: 24px; font-weight: 700; color: var(--danger); margin-top: 5px;" id="attendance-stat-absent">0</div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-responsive" style="max-height: 400px; border-radius: 12px; border: 1px solid var(--slate-200);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead style="position: sticky; top: 0; background: var(--slate-50); z-index: 10;">
+                        <tr>
+                            <th style="width: 60px; text-align: center;">ลำดับ</th>
+                            <th style="width: 150px;">รหัสนักศึกษา</th>
+                            <th>ชื่อ-นามสกุล</th>
+                            <th>สาขาวิชา</th>
+                            <th style="width: 180px; text-align: center;">สถานะ</th>
+                            <th style="width: 100px; text-align: center;">คะแนน</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-report-tbody">
+                        <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--slate-400);">กรุณาเลือกกิจกรรมด้านบนเพื่อแสดงรายงาน</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: VERIFY WORKS -->
     <div class="modal" id="works-modal">
         <div class="modal-content" style="max-width: 900px;">
@@ -728,20 +867,25 @@
                 <button class="btn btn-outline mini-btn" onclick="closeWorksModal()">ปิด</button>
             </div>
 
-            <div style="background: #fff; padding: 15px; border-radius: 12px; border: 1px solid var(--slate-200); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px;">
-                <div class="filter-item" style="flex: 2; min-width: 250px;">
-                    <label>เลือกกิจกรรมที่ต้องการตรวจ:</label>
-                    <select id="works-event-filter" onchange="fetchEventStudents()" style="width: 100%; margin-top: 5px;">
+            <div style="background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.25); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-start; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);">
+                <div style="flex: 2.5; min-width: 280px; display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.5px;">เลือกกิจกรรมที่ต้องการตรวจ:</label>
+                    <input type="text" id="works-event-search" placeholder="🔍 ค้นหาชื่อกิจกรรม..." oninput="populateWorksDropdown()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; font-size: 13px; margin: 0;">
+                    <select id="works-event-filter" onchange="fetchEventStudents()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; margin: 0;">
                         <option value="">-- กรุณาเลือกกิจกรรม --</option>
                     </select>
                 </div>
-                <div class="filter-item" style="flex: 1; min-width: 150px;">
-                    <label>สถานะรูปหลักฐาน:</label>
-                    <select id="works-upload-filter" onchange="renderWorksTable()" style="width: 100%; margin-top: 5px;">
+                <div style="flex: 1; min-width: 160px; display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.5px;">สถานะรูปหลักฐาน:</label>
+                    <select id="works-upload-filter" onchange="renderWorksTable()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; margin: 0;">
                         <option value="all">ทั้งหมด</option>
                         <option value="uploaded">อัปโหลดแล้ว</option>
                         <option value="not_uploaded">ยังไม่อัปโหลด</option>
                     </select>
+                </div>
+                <div style="flex: 1.5; min-width: 220px; display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.5px;">ค้นหารายชื่อ / รหัสนักศึกษา:</label>
+                    <input type="text" id="works-search-input" placeholder="พิมพ์ชื่อหรือรหัสเพื่อค้นหา..." oninput="renderWorksTable()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; margin: 0;">
                 </div>
             </div>
 
@@ -862,6 +1006,59 @@
         </div>
     </div>
 
+    <!-- MODAL: SECURE DYNAMIC QR CHECK-IN -->
+    <div class="modal" id="qr-modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center; padding: 35px; border-radius: 24px; background: white;">
+            <div class="modal-header" style="justify-content: center; position: relative; margin-bottom: 20px; border: none; padding: 0;">
+                <h2 class="modal-title" style="font-size: 22px; font-weight: 700; color: var(--slate-900); display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <i class="fa-solid fa-qrcode" style="color: var(--primary); font-size: 24px;"></i> 
+                    เช็คอินด้วย QR Code อัจฉริยะ
+                </h2>
+                <button class="btn btn-outline mini-btn" onclick="closeQRModal()" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; background: white;">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            
+            <div style="background: var(--slate-50); padding: 15px; border-radius: 16px; border: 1px solid var(--slate-200); margin-bottom: 20px; text-align: left;">
+                <div id="qr-event-title" style="font-weight: 700; font-size: 16px; color: var(--slate-800); margin-bottom: 6px; line-height: 1.4;"></div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span id="qr-gps-status" style="font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;"></span>
+                </div>
+            </div>
+
+            <div style="position: relative; width: 300px; height: 300px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid var(--slate-200); overflow: hidden;">
+                <!-- QR Code Image -->
+                <img id="qr-code-img" src="" alt="QR Code" style="width: 270px; height: 270px; transition: opacity 0.3s ease;">
+                
+                <!-- Loading overlay -->
+                <div id="qr-loading-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 32px; color: var(--primary);"></i>
+                    <span style="font-size: 13px; font-weight: 600; color: var(--slate-500);">กำลังสร้างรหัสผ่านใหม่...</span>
+                </div>
+            </div>
+
+            <!-- Custom Progress Bar / Countdown -->
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--slate-500);">
+                    <span>คิวอาร์เปลี่ยนรหัสใหม่ทุก 60 วินาที</span>
+                    <span id="qr-timer-text" style="color: var(--primary); font-size: 14px; font-weight: 700; font-family: monospace;">60s</span>
+                </div>
+                <div style="height: 6px; width: 100%; background: var(--slate-100); border-radius: 10px; overflow: hidden; border: 1px solid var(--slate-200);">
+                    <div id="qr-progress-bar" style="height: 100%; width: 100%; background: #10b981; border-radius: 10px; transition: width 1s linear;"></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-outline" onclick="generateQRToken()" style="display: flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 12px; font-weight: 600;">
+                    <i class="fa-solid fa-arrows-rotate"></i> รีเฟรชทันที
+                </button>
+                <button class="btn btn-secondary" onclick="closeQRModal()" style="padding: 10px 20px; border-radius: 12px; font-weight: 600;">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toast-container"></div>
 
@@ -929,8 +1126,10 @@
                     const btns = {
                         'manage-users-btn': isAdmin || isMajor,
                         'view-works-btn': isAdmin || isMajor,
+                        'view-attendance-report-btn': isAdmin || isMajor,
                         'view-leaderboard-btn': isAdmin || isMajor,
-                        'manage-carousel-btn': isAdmin
+                        'manage-carousel-btn': isAdmin,
+                        'admin-backup-btn': isAdmin
                     };
                     
                     for (const [id, show] of Object.entries(btns)) {
@@ -1077,6 +1276,7 @@
                         <td data-label="จัดการ" style="text-align: center;">
                             ${canEdit ? `
                                 <button class="btn btn-outline mini-btn" onclick="openModal('${j(e.id)}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-outline mini-btn" style="color: var(--success);" onclick="openQRModal('${j(e.id)}', '${j(e.title)}')" title="🎫 เช็คอินคิวอาร์"><i class="fa-solid fa-qrcode"></i></button>
                                 ${regOpen ? `<button class="btn btn-outline mini-btn" style="color:var(--primary);" onclick="openRegistrationsModal('${j(e.id)}','${j(e.title)}')" title="ดูผู้จอง"><i class="fa-solid fa-users"></i></button>` : ''}
                                 <button class="btn btn-outline mini-btn" title="${isHidden ? 'แสดงบนเว็บ' : 'ซ่อนจากเว็บ'}" style="color: ${isHidden ? 'var(--success)' : 'var(--slate-400)'};" onclick="toggleEventVisibility('${j(e.id)}', ${isHidden})"><i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
                                 <button class="btn btn-outline mini-btn" style="color: var(--danger);" onclick="deleteEvent('${j(e.id)}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
@@ -1100,9 +1300,13 @@
             document.getElementById('event-score').value = '0';
             document.getElementById('event-status').value = 'รอการดำเนินการ';
             document.getElementById('event-location').value = '';
+            document.getElementById('event-latitude').value = '17.18994';
+            document.getElementById('event-longitude').value = '104.09153';
             document.getElementById('event-description').value = '';
             document.getElementById('event-registration-open').checked = true;
             document.getElementById('event-max-participants').value = '200';
+            document.getElementById('event-registration-start').value = '';
+            document.getElementById('event-registration-end').value = '';
             // Reset date helper inputs to avoid stale values
             document.getElementById('date-helper1').value = '';
             document.getElementById('date-helper2').value = '';
@@ -1125,9 +1329,13 @@
                     document.getElementById('event-score').value = e.score || 0;
                     document.getElementById('event-status').value = e.status || 'รอการดำเนินการ';
                     document.getElementById('event-location').value = e.location || '';
+                    document.getElementById('event-latitude').value = e.latitude || 17.18994;
+                    document.getElementById('event-longitude').value = e.longitude || 104.09153;
                     document.getElementById('event-description').value = e.description || '';
                     document.getElementById('event-registration-open').checked = e.registration_open === true;
                     document.getElementById('event-max-participants').value = e.max_participants || 0;
+                    document.getElementById('event-registration-start').value = e.registration_start || '';
+                    document.getElementById('event-registration-end').value = e.registration_end || '';
                     categorySelect.value = e.category || 'กิจกรรมสาขาวิชา';
                     if (currentUser.role === 'admin') document.getElementById('event-owner').value = e.owner;
                 }
@@ -1152,6 +1360,134 @@
 
         function closeModal() { document.getElementById('event-modal').classList.remove('active'); }
 
+        // --- QR Check-In Modal Functions ---
+        let qrInterval = null;
+        let qrCountdownInterval = null;
+        let qrTimeRemaining = 60;
+        let currentQREventId = null;
+
+        async function openQRModal(eventId, eventTitle) {
+            currentQREventId = eventId;
+            document.getElementById('qr-event-title').textContent = eventTitle;
+            
+            // Open Modal
+            const modal = document.getElementById('qr-modal');
+            modal.classList.add('active');
+            
+            // Reset state and generate token
+            await generateQRToken();
+            
+            // Clean up any existing intervals
+            if (qrInterval) clearInterval(qrInterval);
+            if (qrCountdownInterval) clearInterval(qrCountdownInterval);
+            
+            // Set up polling interval (every 60 seconds)
+            qrInterval = setInterval(generateQRToken, 60000);
+            
+            // Set up countdown timer (every 1 second)
+            startQRCountdown();
+        }
+
+        async function generateQRToken() {
+            if (!currentQREventId) return;
+            
+            const overlay = document.getElementById('qr-loading-overlay');
+            if (overlay) overlay.style.display = 'flex';
+            
+            try {
+                const res = await fetch(`/api/admin/event/${currentQREventId}/checkin-token`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    const token = data.token;
+                    const checkinURL = `${window.location.origin}/checkin?token=${token}`;
+                    
+                    // Generate QR code using public qrserver API
+                    const qrImg = document.getElementById('qr-code-img');
+                    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkinURL)}`;
+                    
+                    // Update GPS Status badge
+                    const gpsStatus = document.getElementById('qr-gps-status');
+                    const isGpsActive = (data.latitude !== 0.0 || data.longitude !== 0.0);
+                    
+                    if (isGpsActive) {
+                        gpsStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+                        gpsStatus.style.color = '#10b981';
+                        gpsStatus.innerHTML = `<i class="fa-solid fa-location-dot"></i> พิกัด GPS: ${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)} (รัศมี 500ม.)`;
+                    } else {
+                        gpsStatus.style.background = 'rgba(100, 116, 139, 0.1)';
+                        gpsStatus.style.color = '#64748b';
+                        gpsStatus.innerHTML = `<i class="fa-solid fa-globe"></i> โหมดเช็คอินปกติ (ไม่มีการตรวจพิกัด)`;
+                    }
+                    
+                    // Reset countdown
+                    qrTimeRemaining = 60;
+                    updateQRProgressBar();
+                    
+                    // Pre-load image before hiding overlay
+                    qrImg.onload = () => {
+                        if (overlay) overlay.style.display = 'none';
+                    };
+                } else {
+                    toast(data.message || 'เกิดข้อผิดพลาดในการสร้าง QR Code', 'error');
+                    closeQRModal();
+                }
+            } catch (err) {
+                console.error(err);
+                toast('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+                closeQRModal();
+            }
+        }
+
+        function startQRCountdown() {
+            updateQRProgressBar();
+            qrCountdownInterval = setInterval(() => {
+                qrTimeRemaining--;
+                if (qrTimeRemaining < 0) {
+                    qrTimeRemaining = 60;
+                }
+                updateQRProgressBar();
+            }, 1000);
+        }
+
+        function updateQRProgressBar() {
+            const bar = document.getElementById('qr-progress-bar');
+            const text = document.getElementById('qr-timer-text');
+            if (bar && text) {
+                const percentage = (qrTimeRemaining / 60) * 100;
+                bar.style.width = `${percentage}%`;
+                text.textContent = `${qrTimeRemaining}s`;
+                
+                // Color transition from green to yellow to red
+                if (qrTimeRemaining > 30) {
+                    bar.style.background = '#10b981';
+                    text.style.color = '#10b981';
+                } else if (qrTimeRemaining > 10) {
+                    bar.style.background = '#f59e0b';
+                    text.style.color = '#f59e0b';
+                } else {
+                    bar.style.background = '#ef4444';
+                    text.style.color = '#ef4444';
+                }
+            }
+        }
+
+        function closeQRModal() {
+            const modal = document.getElementById('qr-modal');
+            modal.classList.remove('active');
+            
+            // Clean up intervals
+            if (qrInterval) {
+                clearInterval(qrInterval);
+                qrInterval = null;
+            }
+            if (qrCountdownInterval) {
+                clearInterval(qrCountdownInterval);
+                qrCountdownInterval = null;
+            }
+            currentQREventId = null;
+        }
+
         async function saveEvent() {
             const id = document.getElementById('event-id').value;
             const title = document.getElementById('event-title').value.trim();
@@ -1160,9 +1496,13 @@
             const status = document.getElementById('event-status').value;
             const category = document.getElementById('event-category').value;
             const location = document.getElementById('event-location').value.trim();
+            const latitude = parseFloat(document.getElementById('event-latitude').value) || 0.0;
+            const longitude = parseFloat(document.getElementById('event-longitude').value) || 0.0;
             const description = document.getElementById('event-description').value.trim();
             const registration_open = document.getElementById('event-registration-open').checked;
             const max_participants = parseInt(document.getElementById('event-max-participants').value) || 0;
+            const registration_start = document.getElementById('event-registration-start').value;
+            const registration_end = document.getElementById('event-registration-end').value;
 
             // Security & Basic Validation
             if (!title || !date) { toast('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน', 'error'); return; }
@@ -1175,9 +1515,14 @@
                 toast('คำอธิบายมีอักขระที่ไม่ได้รับอนุญาต', 'error'); return;
             }
 
+            if (registration_start && registration_end && registration_start > registration_end) {
+                toast('เวลาปิดรับสมัครจะต้องมาหลังเวลาเปิดรับสมัคร', 'error'); return;
+            }
+
             const eventData = {
-                title, date, score, status, category, location, description, 
-                registration_open, max_participants
+                title, date, score, status, category, location, latitude, longitude, description, 
+                registration_open, max_participants,
+                registration_start, registration_end
             };
             
             if (currentUser.role === 'admin') {
@@ -1207,6 +1552,365 @@
             if (!confirm('ยืนยันการลบกิจกรรมนี้?')) return;
             const res = await fetch(`/api/events/delete/${id}`, { method: 'POST' });
             if (res.ok) { fetchEvents(); toast('ลบกิจกรรมเรียบร้อยแล้ว', 'success'); }
+        }
+
+        // --- Attendance Report Management ---
+        let currentAttendanceStudents = [];
+        let currentAttendanceEventTitle = "";
+
+        function openAttendanceReportModal() {
+            const searchInput = document.getElementById('attendance-event-search');
+            if (searchInput) searchInput.value = '';
+            document.getElementById('attendance-report-modal').classList.add('active');
+            populateAttendanceEventsDropdown();
+            
+            // Major isolation: restrict major admin to their own major
+            if (currentUser && currentUser.role === 'major') {
+                const select = document.getElementById('attendance-major-select');
+                if (select) {
+                    select.value = currentUser.name;
+                }
+                const wrapper = document.getElementById('attendance-major-filter-wrapper');
+                if (wrapper) {
+                    wrapper.style.display = 'none';
+                }
+            } else {
+                const wrapper = document.getElementById('attendance-major-filter-wrapper');
+                if (wrapper) {
+                    wrapper.style.display = 'block';
+                }
+            }
+        }
+
+        function closeAttendanceReportModal() {
+            document.getElementById('attendance-report-modal').classList.remove('active');
+        }
+
+        function populateAttendanceEventsDropdown() {
+            const select = document.getElementById('attendance-event-select');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- กรุณาเลือกกิจกรรม --</option>';
+
+            const searchInput = document.getElementById('attendance-event-search');
+            const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            function parseEventDate(dateStr) {
+                if (!dateStr) return null;
+                if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return new Date(dateStr);
+                const thaiMonthMap = {
+                    'ม.ค.':0,'ก.พ.':1,'มี.ค.':2,'เม.ย.':3,'พ.ค.':4,'มิ.ย.':5,
+                    'ก.ค.':6,'ส.ค.':7,'ก.ย.':8,'ต.ค.':9,'พ.ย.':10,'ธ.ค.':11
+                };
+                const m = dateStr.match(/(\d{1,2})(?:-\d{1,2})?\s+([ก-ฮ.]+)\s+(\d{2,4})/);
+                if (m) {
+                    const day = parseInt(m[1]);
+                    const mon = thaiMonthMap[m[2]];
+                    let yr = parseInt(m[3]);
+                    if (yr < 2500) yr += 2500;
+                    yr -= 543;
+                    if (mon !== undefined) return new Date(yr, mon, day);
+                }
+                return null;
+            }
+
+            function diffDays(d) {
+                if (!d) return Infinity;
+                const ms = d - today;
+                return Math.round(ms / 86400000);
+            }
+
+            function relativeLabel(diff) {
+                if (diff === 0) return '📅 วันนี้';
+                if (diff === 1) return '⏩ พรุ่งนี้';
+                if (diff === -1) return '⏪ เมื่อวาน';
+                if (diff > 0 && diff <= 7) return `📌 อีก ${diff} วัน`;
+                if (diff < 0 && diff >= -7) return `🕐 ${Math.abs(diff)} วันที่แล้ว`;
+                if (diff < 0 && diff >= -30) return `📂 ${Math.abs(diff)} วันที่แล้ว`;
+                return '';
+            }
+
+            let filteredEvents = events;
+            if (searchVal) {
+                filteredEvents = events.filter(e => e.title.toLowerCase().includes(searchVal));
+            }
+
+            const enriched = filteredEvents.map(e => {
+                const parsed = parseEventDate(e.date);
+                const diff = diffDays(parsed);
+                return { ...e, _parsed: parsed, _diff: diff };
+            });
+
+            enriched.sort((a, b) => {
+                const absDiffA = Math.abs(a._diff === Infinity ? 99999 : a._diff);
+                const absDiffB = Math.abs(b._diff === Infinity ? 99999 : b._diff);
+                if (absDiffA !== absDiffB) return absDiffA - absDiffB;
+                return (b._diff > 0 ? 1 : 0) - (a._diff > 0 ? 1 : 0);
+            });
+
+            const upcoming = enriched.filter(e => e._diff >= 0 && e._diff <= 30);
+            const recentPast = enriched.filter(e => e._diff < 0 && e._diff >= -60);
+            const older = enriched.filter(e => e._diff < -60 || e._diff === Infinity || e._diff > 30);
+
+            function addGroup(label, items) {
+                if (!items.length) return;
+                const grp = document.createElement('optgroup');
+                grp.label = label;
+                items.forEach(e => {
+                    const rel = relativeLabel(e._diff);
+                    const prefix = rel ? `[${rel}] ` : (e.date ? `(${e.date}) ` : '');
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = prefix + e.title;
+                    grp.appendChild(opt);
+                });
+                select.appendChild(grp);
+            }
+
+            addGroup('🔵 กำลังมาถึง / ปัจจุบัน', upcoming);
+            addGroup('🟡 ที่ผ่านมา (60 วัน)', recentPast);
+            addGroup('⚪ กิจกรรมเก่า', older);
+        }
+
+        async function fetchAttendanceReport() {
+            const eventId = document.getElementById('attendance-event-select').value;
+            const majorVal = document.getElementById('attendance-major-select').value;
+            const tbody = document.getElementById('attendance-report-tbody');
+            
+            if (!eventId) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--slate-400);">กรุณาเลือกกิจกรรมด้านบนเพื่อแสดงรายงาน</td></tr>';
+                currentAttendanceStudents = [];
+                currentAttendanceEventTitle = "";
+                updateAttendanceStats({ total:0, approved:0, pending:0, registered:0, not_attended:0 });
+                return;
+            }
+            
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">กำลังโหลดข้อมูลรายงาน...</td></tr>';
+            
+            try {
+                const res = await fetch(`/api/admin/reports/attendance?event_id=${eventId}&major=${majorVal}`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    currentAttendanceStudents = data.students;
+                    currentAttendanceEventTitle = data.event.title;
+                    updateAttendanceStats(data.stats);
+                    renderAttendanceTable();
+                } else {
+                    toast(data.message || 'เกิดข้อผิดพลาดในการโหลดรายงาน', 'error');
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--danger);">ไม่สามารถโหลดข้อมูลได้: ' + data.message + '</td></tr>';
+                }
+            } catch (err) {
+                console.error(err);
+                toast('การเชื่อมต่อล้มเหลว โปรดลองอีกครั้ง', 'error');
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--danger);">เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์</td></tr>';
+            }
+        }
+
+        function updateAttendanceStats(stats) {
+            document.getElementById('attendance-stat-total').textContent = stats.total;
+            document.getElementById('attendance-stat-approved').textContent = stats.approved;
+            document.getElementById('attendance-stat-pending').textContent = stats.pending;
+            document.getElementById('attendance-stat-registered').textContent = stats.registered;
+            document.getElementById('attendance-stat-absent').textContent = stats.not_attended + (stats.rejected || 0);
+        }
+
+        function renderAttendanceTable() {
+            const tbody = document.getElementById('attendance-report-tbody');
+            tbody.innerHTML = '';
+            
+            const searchVal = document.getElementById('attendance-search-input').value.toLowerCase().trim();
+            
+            let filtered = currentAttendanceStudents;
+            if (searchVal) {
+                filtered = filtered.filter(s => 
+                    s.username.toLowerCase().includes(searchVal) || 
+                    s.name.toLowerCase().includes(searchVal)
+                );
+            }
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--slate-400);">ไม่พบข้อมูลที่ตรงกับการค้นหา</td></tr>';
+                return;
+            }
+            
+            const statusMap = {
+                'approved': { label: 'อนุมัติแล้ว (เช็คอินสำเร็จ)', bg: '#f0fdf4', color: '#16a34a', border: '#bcf0da' },
+                'pending': { label: 'รอตรวจสอบหลักฐาน', bg: '#fffbeb', color: '#b45309', border: '#fde68a' },
+                'rejected': { label: 'ไม่อนุมัติหลักฐาน', bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+                'registered': { label: 'จองสิทธิ์แล้ว (ยังไม่เช็คอิน)', bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd' },
+                'not_attended': { label: 'ไม่ได้เข้าร่วม', bg: '#f1f5f9', color: '#64748b', border: '#cbd5e1' }
+            };
+            
+            filtered.forEach((s, idx) => {
+                const conf = statusMap[s.status] || statusMap.not_attended;
+                const badge = `<span class="status-badge" style="background: ${conf.bg}; color: ${conf.color}; border: 1.5px solid ${conf.border}; font-size: 11px; padding: 3px 10px; border-radius: 6px; font-weight: 600;">${conf.label}</span>`;
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="text-align: center; font-weight: 600; color: var(--slate-400);">${idx + 1}</td>
+                        <td style="font-weight: bold; color: var(--slate-900);">${s.username}</td>
+                        <td style="font-weight: 500;">${s.name}</td>
+                        <td>${s.major || '-'}</td>
+                        <td style="text-align: center;">${badge}</td>
+                        <td style="text-align: center; font-weight: bold; color: ${s.score > 0 ? 'var(--success)' : 'var(--slate-400)'};">${s.score || 0}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function filterAttendanceTable() {
+            renderAttendanceTable();
+        }
+
+        function exportAttendanceToCSV() {
+            if (currentAttendanceStudents.length === 0) {
+                alert('ไม่มีข้อมูลสำหรับส่งออก กรุณาเลือกกิจกรรมก่อน');
+                return;
+            }
+            
+            let csv = '\ufeff'; // Add UTF-8 BOM to make it Excel compatible
+            csv += 'ลำดับ,รหัสนักศึกษา,ชื่อ-นามสกุล,สาขาวิชา,สถานะการเข้าร่วม,คะแนนที่ได้รับ\n';
+            
+            const statusLabelMap = {
+                'approved': 'อนุมัติแล้ว (เช็คอินสำเร็จ)',
+                'pending': 'รอตรวจสอบหลักฐาน',
+                'rejected': 'ไม่อนุมัติหลักฐาน',
+                'registered': 'จองสิทธิ์แล้ว (ยังไม่เช็คอิน)',
+                'not_attended': 'ไม่ได้เข้าร่วม'
+            };
+            
+            currentAttendanceStudents.forEach((s, idx) => {
+                const label = statusLabelMap[s.status] || 'ไม่ได้เข้าร่วม';
+                const nameEscaped = `"${s.name.replace(/"/g, '""')}"`;
+                const majorEscaped = `"${(s.major || '-').replace(/"/g, '""')}"`;
+                csv += `${idx + 1},${s.username},${nameEscaped},${majorEscaped},${label},${s.score || 0}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            
+            const sanitizedTitle = currentAttendanceEventTitle.replace(/[^a-zA-Z0-9ก-๙_ ]/g, '');
+            link.setAttribute('download', `รายงานการเข้ากิจกรรม_${sanitizedTitle || 'สรุป'}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function printAttendanceReport() {
+            if (currentAttendanceStudents.length === 0) {
+                alert('ไม่มีข้อมูลสำหรับจัดพิมพ์ กรุณาเลือกกิจกรรมก่อน');
+                return;
+            }
+            
+            const majorName = document.getElementById('attendance-major-select').value;
+            const printWin = window.open('', '_blank');
+            
+            const statusPrintLabelMap = {
+                'approved': '✓ เข้าร่วมแล้ว',
+                'pending': '⏳ รอตรวจสอบ',
+                'rejected': '✗ ไม่ผ่าน',
+                'registered': '☐ จองแล้ว',
+                'not_attended': 'ไม่ได้เข้าร่วม'
+            };
+
+            let rowsHtml = '';
+            currentAttendanceStudents.forEach((s, idx) => {
+                const label = statusPrintLabelMap[s.status] || 'ไม่ได้เข้าร่วม';
+                rowsHtml += `
+                    <tr>
+                        <td style="text-align: center; border: 1px solid #333; padding: 6px;">${idx + 1}</td>
+                        <td style="border: 1px solid #333; padding: 6px; font-family: Courier, monospace;">${s.username}</td>
+                        <td style="border: 1px solid #333; padding: 6px;">${s.name}</td>
+                        <td style="border: 1px solid #333; padding: 6px;">${s.major || '-'}</td>
+                        <td style="text-align: center; border: 1px solid #333; padding: 6px;">${label}</td>
+                        <td style="border: 1px solid #333; padding: 6px; width: 120px;"></td>
+                    </tr>
+                `;
+            });
+
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>พิมพ์รายงานการเข้ากิจกรรม - SCITECH</title>
+                    <meta charset="utf-8">
+                    <style>
+                        body { font-family: 'Sarabun', 'Kanit', sans-serif; padding: 20px; color: #000; font-size: 14px; }
+                        h2, h3 { margin: 5px 0; text-align: center; }
+                        .meta-info { margin: 20px 0; display: flex; justify-content: space-between; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                        th { background: #f2f2f2; border: 1px solid #333; padding: 8px; font-weight: bold; }
+                        td { border: 1px solid #333; padding: 6px; }
+                        .footer-signatures { margin-top: 60px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+                        .sig-box { text-align: center; width: 250px; }
+                        @media print {
+                            body { padding: 0; }
+                            button { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>รายงานสรุปการเข้าร่วมกิจกรรมนักศึกษา</h2>
+                    <h3>คณะวิทยาศาสตร์และเทคโนโลยี</h3>
+                    
+                    <div class="meta-info">
+                        <div>
+                            <strong>กิจกรรม:</strong> ${currentAttendanceEventTitle}<br>
+                            <strong>ผู้กรองสาขา:</strong> ${majorName === 'all' ? 'ทุกสาขาวิชา' : majorName}
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>พิมพ์เมื่อวันที่:</strong> ${new Date().toLocaleDateString('th-TH')}<br>
+                            <strong>จำนวนนักศึกษาทั้งหมด:</strong> ${currentAttendanceStudents.length} คน
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;">ลำดับ</th>
+                                <th style="width: 15%;">รหัสนักศึกษา</th>
+                                <th style="width: 30%;">ชื่อ-นามสกุล</th>
+                                <th style="width: 25%;">สาขาวิชา</th>
+                                <th style="width: 15%;">สถานะการเข้า</th>
+                                <th style="width: 10%;">ลายมือชื่อ / หมายเหตุ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                    
+                    <div class="footer-signatures">
+                        <div class="sig-box">
+                            <p>ลงชื่อ............................................................</p>
+                            <p>(............................................................)</p>
+                            <p>ผู้รายงาน / ประธานสาขาวิชา</p>
+                        </div>
+                        <div class="sig-box">
+                            <p>ลงชื่อ............................................................</p>
+                            <p>(............................................................)</p>
+                            <p>ผู้ตรวจสอบ / สโมสรนักศึกษา</p>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `;
+            
+            printWin.document.open();
+            printWin.document.write(html);
+            printWin.document.close();
         }
 
         // --- User/Report Management ---
@@ -1243,11 +1947,12 @@
             container.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">กำลังโหลดข้อมูล...</td></tr>';
             
             const major = document.getElementById('report-major-filter').value;
-            const year = document.getElementById('report-year-filter').value;
+            const year = currentReportTab === 'admins' ? 'all' : document.getElementById('report-year-filter').value;
             const search = document.getElementById('report-search').value;
+            const role = currentReportTab === 'students' ? 'student' : 'major';
             
             try {
-                const res = await fetch(`/api/admin/reports/students?page=${reportPage}&limit=${reportLimit}&major=${major}&year=${year}&search=${search}`);
+                const res = await fetch(`/api/admin/reports/students?page=${reportPage}&limit=${reportLimit}&major=${major}&year=${year}&search=${search}&role=${role}`);
                 const data = await res.json();
                 
                 if (data.data) {
@@ -1310,6 +2015,33 @@
 
         function renderReportTable() {
             const container = document.getElementById('report-list-container');
+            const thead = document.querySelector('.user-table thead');
+            
+            // Update table headers dynamically based on current tab
+            if (thead) {
+                if (currentReportTab === 'students') {
+                    thead.innerHTML = `
+                        <tr style="position: sticky; top: 0; z-index: 10;">
+                            <th>รหัสนักศึกษา</th>
+                            <th>ชื่อ-นามสกุล / สาขา / ชั้นปี</th>
+                            <th style="text-align: center;">ร่วมกิจกรรม</th>
+                            <th style="text-align: center;">คะแนนรวม</th>
+                            <th style="text-align: center;">จัดการ</th>
+                        </tr>
+                    `;
+                } else {
+                    thead.innerHTML = `
+                        <tr style="position: sticky; top: 0; z-index: 10;">
+                            <th>ชื่อผู้ใช้ (Username)</th>
+                            <th>ชื่อ-นามสกุล / สาขาที่ดูแล</th>
+                            <th style="text-align: center;">ร่วมกิจกรรม</th>
+                            <th style="text-align: center;">คะแนนรวม</th>
+                            <th style="text-align: center;">จัดการ</th>
+                        </tr>
+                    `;
+                }
+            }
+
             let filtered = allStudentsForReport;
             
             // Filter by Tab (Still split students/admins in UI)
@@ -1399,7 +2131,7 @@
             document.getElementById('detail-student-name').textContent = n;
             document.getElementById('detail-student-info').textContent = `${u} | ${m}`;
             const list = document.getElementById('student-activities-list');
-            list.innerHTML = '<div style="padding: 20px; text-align: center;">Loading...</div>';
+            list.innerHTML = '<div style="padding: 20px; text-align: center;">กำลังโหลด...</div>';
             document.getElementById('student-detail-modal').classList.add('active');
             
             const res = await fetch(`/api/admin/student/${encodeURIComponent(u)}/activities`);
@@ -1476,6 +2208,9 @@
             if (!select) return;
             select.innerHTML = '<option value="">-- กรุณาเลือกกิจกรรม --</option>';
 
+            const searchInput = document.getElementById('works-event-search');
+            const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
@@ -1517,8 +2252,13 @@
                 return '';
             }
 
+            let filteredEvents = events;
+            if (searchVal) {
+                filteredEvents = events.filter(e => e.title.toLowerCase().includes(searchVal));
+            }
+
             // Enrich events with parsed date & diff
-            const enriched = events.map(e => {
+            const enriched = filteredEvents.map(e => {
                 const parsed = parseEventDate(e.date);
                 const diff = diffDays(parsed);
                 return { ...e, _parsed: parsed, _diff: diff };
@@ -1586,6 +2326,9 @@
             container.innerHTML = '';
             
             const uploadFilter = document.getElementById('works-upload-filter').value;
+            const searchInput = document.getElementById('works-search-input');
+            const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
             let filteredData = currentWorksData;
             
             if (uploadFilter === 'uploaded') {
@@ -1594,24 +2337,40 @@
                 filteredData = filteredData.filter(s => !s.image_url);
             }
 
+            if (searchVal) {
+                filteredData = filteredData.filter(s => 
+                    s.username.toLowerCase().includes(searchVal) || 
+                    s.name.toLowerCase().includes(searchVal)
+                );
+            }
+
             if (filteredData.length === 0) {
                 container.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--slate-400);">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
                 return;
             }
 
             filteredData.forEach(s => {
-                const imgHtml = s.image_url ? `<a href="${s.image_url}" target="_blank"><img src="${s.image_url}" loading="lazy" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid var(--slate-200);"></a>` : '-';
-                let statusHtml = '<span class="status-badge" style="background: #f1f5f9; color: #64748b;">รอดำเนินการ</span>';
-                if (s.status === 'approved') statusHtml = '<span class="status-badge status-done">อนุมัติแล้ว</span>';
-                if (s.status === 'rejected') statusHtml = '<span class="status-badge" style="background: #fee2e2; color: #b91c1c;">ไม่อนุมัติ</span>';
-                if (s.status === 'pending') statusHtml = '<span class="status-badge status-pending">รอตรวจสอบ</span>';
+                const imgHtml = s.image_url ? `<a href="#" onclick="openLightbox('${s.image_url}'); return false;"><img src="${s.image_url}" loading="lazy" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1.5px solid rgba(0,0,0,0.1); cursor: zoom-in; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'"></a>` : '-';
+                
+                let statusHtml = '<span class="status-badge" style="background: hsla(215, 16%, 47%, 0.15); color: hsl(215, 16%, 35%); border: 1.5px solid hsla(215, 16%, 47%, 0.3); font-weight:600; padding:4px 10px; border-radius:20px; font-size:12px;">ยังไม่ได้ส่งหลักฐาน</span>';
+                if (s.status === 'approved') {
+                    statusHtml = '<span class="status-badge" style="background: hsla(142, 70%, 45%, 0.15); color: hsl(142, 76%, 36%); border: 1.5px solid hsla(142, 70%, 45%, 0.3); font-weight:600; padding:4px 10px; border-radius:20px; font-size:12px;">อนุมัติแล้ว</span>';
+                } else if (s.status === 'rejected') {
+                    statusHtml = '<span class="status-badge" style="background: hsla(0, 84%, 60%, 0.15); color: hsl(0, 84%, 48%); border: 1.5px solid hsla(0, 84%, 60%, 0.3); font-weight:600; padding:4px 10px; border-radius:20px; font-size:12px;">ไม่อนุมัติ</span>';
+                } else if (s.status === 'pending') {
+                    statusHtml = '<span class="status-badge" style="background: hsla(38, 92%, 50%, 0.15); color: hsl(38, 92%, 40%); border: 1.5px solid hsla(38, 92%, 50%, 0.3); font-weight:600; padding:4px 10px; border-radius:20px; font-size:12px;">รอตรวจสอบ</span>';
+                } else if (s.status === 'registered') {
+                    statusHtml = '<span class="status-badge" style="background: hsla(200, 95%, 50%, 0.15); color: hsl(200, 95%, 40%); border: 1.5px solid hsla(200, 95%, 50%, 0.3); font-weight:600; padding:4px 10px; border-radius:20px; font-size:12px;">จองสิทธิ์แล้ว</span>';
+                } else if (s.status === 'not_participated') {
+                    statusHtml = '<span class="status-badge" style="background: hsla(215, 16%, 47%, 0.15); color: hsl(215, 16%, 35%); border: 1.5px solid hsla(215, 16%, 47%, 0.3); font-weight:600; padding:4px 10px; border-radius:20px; font-size:12px;">ยังไม่ได้ส่งหลักฐาน</span>';
+                }
 
                 container.innerHTML += `
                     <tr>
                         <td data-label="เลือก"><input type="checkbox" class="work-checkbox" value="${s.username}"></td>
                         <td data-label="รายชื่อ">
-                            <div style="font-weight: 600;">${s.name}</div>
-                            <div style="font-size: 11px; color: var(--slate-400);">${s.username}</div>
+                            <div style="font-weight: 600; color: var(--slate-900);">${s.name}</div>
+                            <div style="font-size: 11px; color: var(--slate-400); font-family: Courier, monospace;">${s.username}</div>
                         </td>
                         <td data-label="หลักฐาน" style="text-align: center;">${imgHtml}</td>
                         <td data-label="สถานะ" style="text-align: center;">${statusHtml}</td>
@@ -1694,7 +2453,7 @@
         async function openLeaderboardModal() {
             document.getElementById('leaderboard-modal').classList.add('active');
             const container = document.getElementById('leaderboard-list-container');
-            container.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">Loading...</td></tr>';
+            container.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px;">กำลังโหลด...</td></tr>';
             const res = await fetch('/api/leaderboard');
             const data = await res.json();
             container.innerHTML = '';
@@ -1714,7 +2473,12 @@
         }
 
         function closeReportModal() { document.getElementById('report-modal').classList.remove('active'); }
-        function openWorksModal() { document.getElementById('works-modal').classList.add('active'); populateWorksDropdown(); }
+        function openWorksModal() {
+            const searchInput = document.getElementById('works-event-search');
+            if (searchInput) searchInput.value = '';
+            document.getElementById('works-modal').classList.add('active');
+            populateWorksDropdown();
+        }
         function closeWorksModal() { document.getElementById('works-modal').classList.remove('active'); }
         function closeStudentDetailModal() { document.getElementById('student-detail-modal').classList.remove('active'); }
         function closeLeaderboardModal() { document.getElementById('leaderboard-modal').classList.remove('active'); }
@@ -1736,11 +2500,13 @@
                 
                 updateNotificationBadge(pendingCount);
                 
-                if (currentUser && currentUser.role === 'admin') {
+                if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'major')) {
                     document.getElementById('chart-section').style.display = 'block';
-                    // For chart, we might need more than just the first page, 
-                    // but for now let's just use what we have or fetch a larger set if needed
-                    // For now, let's fetch a larger set for the chart
+                    
+                    // Render status doughnut chart
+                    renderParticipationChart(pData);
+                    
+                    // Fetch student list for scores bar chart
                     const chartRes = await fetch('/api/admin/reports/students?limit=1000');
                     const chartData = await chartRes.json();
                     renderScoreChart(chartData.data || chartData);
@@ -1749,6 +2515,42 @@
         }
 
         async function logout() { await fetch('/api/logout', {method: 'POST'}); window.location.href = '/login'; }
+
+        async function downloadDatabaseBackup() {
+            try {
+                toast('กำลังเตรียมไฟล์สำรองข้อมูล...', 'info');
+                const response = await fetch('/api/admin/backup-db');
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.message || 'การเชื่อมต่อผิดพลาด');
+                }
+                
+                let filename = `scitech_backup_${new Date().toISOString().slice(0,10)}.zip`;
+                const disposition = response.headers.get('Content-Disposition');
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) { 
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                toast('สำรองข้อมูลเสร็จสิ้น ดาวน์โหลดสำเร็จ!', 'success');
+            } catch (e) {
+                console.error('Backup Error:', e);
+                toast(e.message || 'การสำรองข้อมูลล้มเหลว', 'error');
+            }
+        }
 
         // --- Carousel Management ---
         async function openCarouselModal() {
@@ -1762,7 +2564,7 @@
 
         async function fetchCarouselImages() {
             const container = document.getElementById('carousel-images-list');
-            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">Loading...</div>';
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px;">กำลังโหลด...</div>';
             
             const res = await fetch('/api/carousel');
             const images = await res.json();
@@ -1988,55 +2790,236 @@
         }
 
         // --- Feature: Dashboard Chart ---
-        async function loadChartData() {
-            try {
-                const res = await fetch('/api/admin/reports/students?limit=1000');
-                const data = await res.json();
-                const students = data.data || data;
-                if (Array.isArray(students)) renderScoreChart(students);
-            } catch(e) { console.error(e); }
+        let scoreChartInstance = null;
+        let participationChartInstance = null;
+
+        function getChartThemeColors() {
+            const isDark = document.documentElement.classList.contains('dark-theme');
+            return {
+                text: isDark ? '#cbd5e1' : '#334155',
+                grid: isDark ? 'rgba(71, 85, 105, 0.15)' : 'rgba(226, 232, 240, 0.8)',
+                tooltipBg: isDark ? '#1e293b' : '#ffffff',
+                tooltipBorder: isDark ? '#475569' : '#e2e8f0',
+                tooltipText: isDark ? '#f8fafc' : '#1e293b'
+            };
         }
 
         function renderScoreChart(studentData) {
             const canvas = document.getElementById('score-chart');
             if (!canvas) return;
+
             const majorScores = {};
             studentData.forEach(s => {
-                const m = (s.major || 'ไม่ระบุ').replace('สาขาวิชา', '');
+                const m = (s.major || 'ไม่ระบุ').replace('สาขาวิชา', '').trim();
                 if (!majorScores[m]) majorScores[m] = 0;
                 majorScores[m] += (s.score || 0);
             });
+
             const labels = Object.keys(majorScores);
             const scores = Object.values(majorScores);
             if (!labels.length) return;
+
+            const theme = getChartThemeColors();
+
+            if (scoreChartInstance) {
+                scoreChartInstance.destroy();
+            }
+
             const ctx = canvas.getContext('2d');
-            const maxScore = Math.max(...scores, 1);
-            const barH = 34, gap = 10, padL = 150, padR = 70, padT = 10, padB = 10;
-            canvas.width = canvas.parentElement.clientWidth || 600;
-            canvas.height = labels.length * (barH + gap) + padT + padB;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const chartW = canvas.width - padL - padR;
-            const colors = ['#0284c7','#16a34a','#f59e0b','#dc2626','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
-            labels.forEach((label, i) => {
-                const y = padT + i * (barH + gap);
-                const barW = Math.max(4, (scores[i] / maxScore) * chartW);
-                ctx.fillStyle = '#f1f5f9';
-                ctx.beginPath(); ctx.roundRect(padL, y, chartW, barH, 6); ctx.fill();
-                ctx.fillStyle = colors[i % colors.length];
-                ctx.globalAlpha = 0.85;
-                ctx.beginPath(); ctx.roundRect(padL, y, barW, barH, 6); ctx.fill();
-                ctx.globalAlpha = 1;
-                ctx.fillStyle = '#334155'; ctx.font = '13px Kanit,sans-serif'; ctx.textAlign = 'right';
-                ctx.fillText(label, padL - 8, y + barH/2 + 5);
-                ctx.fillStyle = '#0f172a'; ctx.font = 'bold 13px Kanit,sans-serif'; ctx.textAlign = 'left';
-                ctx.fillText(scores[i] + ' คะแนน', padL + barW + 8, y + barH/2 + 5);
+            const colors = [
+                'rgba(2, 132, 199, 0.8)', // Sky blue
+                'rgba(22, 163, 74, 0.8)', // Green
+                'rgba(245, 158, 11, 0.8)', // Amber
+                'rgba(220, 38, 38, 0.8)', // Red
+                'rgba(139, 92, 246, 0.8)', // Violet
+                'rgba(236, 72, 153, 0.8)', // Pink
+                'rgba(6, 182, 212, 0.8)',  // Cyan
+                'rgba(132, 204, 22, 0.8)',  // Lime
+                'rgba(249, 115, 22, 0.8)',  // Orange
+                'rgba(99, 102, 241, 0.8)'   // Indigo
+            ];
+
+            const borderColors = colors.map(c => c.replace('0.8', '1'));
+
+            scoreChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'คะแนนรวมสะสม',
+                        data: scores,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: borderColors.slice(0, labels.length),
+                        borderWidth: 1.5,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: theme.tooltipBg,
+                            borderColor: theme.tooltipBorder,
+                            borderWidth: 1,
+                            titleColor: theme.tooltipText,
+                            bodyColor: theme.tooltipText,
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.parsed.x.toLocaleString()} คะแนน`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: theme.grid },
+                            ticks: {
+                                color: theme.text,
+                                font: { family: 'Kanit' }
+                            }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: {
+                                color: theme.text,
+                                font: { family: 'Kanit', weight: 'bold' }
+                            }
+                        }
+                    }
+                }
             });
         }
+
+        function renderParticipationChart(participations) {
+            const canvas = document.getElementById('participation-chart');
+            if (!canvas) return;
+
+            let confirmed = 0, pending = 0, rejected = 0;
+            participations.forEach(p => {
+                const s = p.status || 'pending';
+                if (s === 'confirmed') confirmed++;
+                else if (s === 'rejected') rejected++;
+                else pending++;
+            });
+
+            const theme = getChartThemeColors();
+
+            if (participationChartInstance) {
+                participationChartInstance.destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            participationChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['อนุมัติแล้ว', 'รออนุมัติ', 'ปฏิเสธ/ไม่ผ่าน'],
+                    datasets: [{
+                        data: [confirmed, pending, rejected],
+                        backgroundColor: [
+                            'rgba(22, 163, 74, 0.8)',  // Emerald green
+                            'rgba(245, 158, 11, 0.8)', // Amber yellow
+                            'rgba(220, 38, 38, 0.8)'   // Red danger
+                        ],
+                        borderColor: [
+                            '#16a34a',
+                            '#f59e0b',
+                            '#dc2626'
+                        ],
+                        borderWidth: 1.5,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: theme.text,
+                                font: { family: 'Kanit', size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: theme.tooltipBg,
+                            borderColor: theme.tooltipBorder,
+                            borderWidth: 1,
+                            titleColor: theme.tooltipText,
+                            bodyColor: theme.tooltipText,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const val = context.raw;
+                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                    return ` ${context.label}: ${val} รายการ (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // Listen for themeChanged to redraw charts with correct styles
+        window.addEventListener('themeChanged', () => {
+            if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'major')) {
+                updateDashboardStats();
+            }
+        });
 
         // Heartbeat to keep session alive and inform server we are still here
         setInterval(() => {
             fetch('/api/me').catch(() => {});
         }, 20000);
+
+        // --- Premium Glassmorphic Lightbox Preview Helpers ---
+        function openLightbox(url) {
+            const modal = document.getElementById('lightbox-modal');
+            const img = document.getElementById('lightbox-img');
+            if (!modal || !img) return;
+            img.src = url;
+            modal.style.display = 'flex';
+            // Force reflow
+            modal.offsetHeight;
+            modal.style.opacity = '1';
+        }
+
+        function closeLightbox() {
+            const modal = document.getElementById('lightbox-modal');
+            if (!modal) return;
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.display = 'none';
+                document.getElementById('lightbox-img').src = '';
+            }, 300);
+        }
+
+        // Add event listener to close lightbox when clicking on background
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('lightbox-modal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeLightbox();
+                    }
+                });
+            }
+        });
     </script>
+
+    <!-- PREMIUM LIGHTBOX MODAL -->
+    <div id="lightbox-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:9999; justify-content:center; align-items:center; opacity:0; transition:opacity 0.3s ease;">
+        <div style="position:relative; max-width:90%; max-height:90%; border-radius:16px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2);">
+            <button onclick="closeLightbox()" style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); border:none; border-radius:50%; width:40px; height:40px; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; transition:background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.9)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img id="lightbox-img" src="" style="max-width:100%; max-height:85vh; object-fit:contain; display:block;">
+        </div>
+    </div>
 </body>
 </html>

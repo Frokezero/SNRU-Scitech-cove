@@ -40,7 +40,7 @@
         html.dark-theme .score-box { background: rgba(255,255,255,0.05); }
 
         /* Notification System Overrides for Profile */
-        .notification-container { position: relative; display: inline-block; }
+        .notification-container { position: relative; display: none !important; }
         .notif-badge {
             position: absolute; top: -2px; right: -2px; background: #ef4444; color: white;
             font-size: 10px; font-weight: 700; min-width: 16px; height: 16px;
@@ -375,6 +375,349 @@
         #upload-msg.success { background: #f0fdf4; color: #16a34a; }
         #upload-msg.loading { background: #f8fafc; color: #64748b; }
 
+        /* ===== PREMIUM UPLOAD MODAL & RESERVED ACTIVITIES SYSTEM ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content-box {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .modal-overlay.active .modal-content-box {
+            transform: scale(1);
+        }
+
+        html.dark-theme .modal-content-box {
+            background: #1e293b;
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-header-custom {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        html.dark-theme .modal-header-custom {
+            border-bottom-color: #334155;
+        }
+
+        .modal-header-custom h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+
+        html.dark-theme .modal-header-custom h3 {
+            color: #f8fafc;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            line-height: 1;
+        }
+
+        .modal-close-btn:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            transform: rotate(90deg);
+        }
+
+        .modal-body-custom {
+            padding: 24px;
+        }
+
+        .modal-footer-custom {
+            padding: 16px 24px;
+            background: #f8fafc;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        html.dark-theme .modal-footer-custom {
+            background: rgba(255, 255, 255, 0.02);
+            border-top-color: #334155;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e1;
+        }
+
+        html.dark-theme .btn-secondary {
+            background: #334155;
+            color: #cbd5e1;
+        }
+
+        html.dark-theme .btn-secondary:hover {
+            background: #475569;
+            color: white;
+        }
+
+        .modal-event-card {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.06) 0%, rgba(15, 76, 129, 0.06) 100%);
+            border: 1px solid rgba(2, 132, 199, 0.15);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        html.dark-theme .modal-event-card {
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(15, 76, 129, 0.1) 100%);
+            border-color: rgba(2, 132, 199, 0.25);
+        }
+
+        .modal-event-title {
+            font-weight: 700;
+            font-size: 15px;
+            color: #0369a1;
+            margin-bottom: 6px;
+        }
+
+        html.dark-theme .modal-event-title {
+            color: #38bdf8;
+        }
+
+        .modal-event-meta {
+            font-size: 12px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        html.dark-theme .modal-event-meta {
+            color: #94a3b8;
+        }
+
+        .drag-drop-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8fafc;
+            position: relative;
+        }
+
+        html.dark-theme .drag-drop-zone {
+            border-color: #475569;
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        .drag-drop-zone:hover, .drag-drop-zone.dragover {
+            border-color: #0284c7;
+            background: rgba(2, 132, 199, 0.04);
+        }
+
+        .drag-drop-icon {
+            font-size: 32px;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .drag-drop-zone:hover .drag-drop-icon {
+            color: #0284c7;
+            transform: translateY(-2px);
+        }
+
+        .drag-drop-text {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        html.dark-theme .drag-drop-text {
+            color: #cbd5e1;
+        }
+
+        .drag-drop-subtext {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .reserved-activity-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 16px 20px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        html.dark-theme .reserved-activity-item {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .reserved-activity-item.status-confirmed:hover {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.04);
+            border-color: #bbf7d0;
+            background: #fafdfb;
+        }
+
+        html.dark-theme .reserved-activity-item.status-confirmed:hover {
+            background: rgba(22, 163, 74, 0.04);
+            border-color: rgba(22, 163, 74, 0.3);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .reserved-activity-item.status-pending:hover {
+            border-color: #fde68a;
+            background: #fffdfa;
+        }
+
+        html.dark-theme .reserved-activity-item.status-pending:hover {
+            background: rgba(245, 158, 11, 0.03);
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .reserved-activity-item.status-cancelled {
+            opacity: 0.55;
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        html.dark-theme .reserved-activity-item.status-cancelled {
+            background: rgba(15, 23, 42, 0.2);
+            border-color: #475569;
+        }
+
+        .reserved-activity-item.status-cancelled:hover {
+            opacity: 0.8;
+            border-color: #fecaca;
+            background: #fffbfa;
+        }
+
+        html.dark-theme .reserved-activity-item.status-cancelled:hover {
+            background: rgba(220, 38, 38, 0.05);
+            border-color: rgba(220, 38, 38, 0.3);
+        }
+
+        .reserved-activity-item::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 5px;
+            transition: width 0.2s;
+        }
+
+        .reserved-activity-item.status-confirmed::before {
+            background: #16a34a;
+        }
+
+        .reserved-activity-item.status-pending::before {
+            background: #f59e0b;
+        }
+
+        .reserved-activity-item.status-cancelled::before {
+            background: #94a3b8; /* Faded gray border for cancelled items instead of aggressive red */
+        }
+
+        .reserved-activity-item:hover::before {
+            width: 8px;
+        }
+
+        /* Filter Pills styling */
+        .pill-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 20px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .pill-btn:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        .pill-btn.active {
+            background: #0284c7;
+            color: white;
+            border-color: #0284c7;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
+        }
+        html.dark-theme .pill-btn {
+            background: #1e293b;
+            border-color: #475569;
+            color: #cbd5e1;
+        }
+        html.dark-theme .pill-btn:hover {
+            background: #334155;
+            color: white;
+        }
+        html.dark-theme .pill-btn.active {
+            background: #0284c7;
+            border-color: #0284c7;
+            color: white;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
+        }
+
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             body { padding: 10px; background: white; }
@@ -427,12 +770,12 @@
             </div>
 
             <!-- Notifications (Always Visible) -->
-            <div class="notification-container" id="notif-container" style="display: none;">
+            <div class="notification-container" id="notif-container" style="display: none !important;">
                 <button class="btn-nav btn-ghost" id="notif-btn" onclick="toggleNotifications()" style="padding: 7px 12px; position: relative;">
                     <i class="fa-solid fa-bell"></i>
                     <span class="notif-badge" id="notif-badge" style="display: none;">0</span>
                 </button>
-                <div class="notif-dropdown" id="notif-dropdown">
+                <div class="notif-dropdown" id="notif-dropdown" style="display: none !important;">
                     <div class="notif-header">
                         <h3><i class="fa-solid fa-bell" style="color:#0284c7;"></i> การแจ้งเตือน</h3>
                         <button onclick="markAllAsRead()" style="background: none; border: none; color: #0284c7; cursor: pointer; font-family: inherit; font-size: 12px;">อ่านทั้งหมด</button>
@@ -442,7 +785,7 @@
                     </div>
                 </div>
             </div>
-            <div class="notif-backdrop" id="notif-backdrop" onclick="closeNotifications()"></div>
+            <div class="notif-backdrop" id="notif-backdrop" onclick="closeNotifications()" style="display: none !important;"></div>
             <button class="btn-nav btn-ghost" onclick="toggleTheme()" title="เปลี่ยนธีม">
                 <i id="theme-toggle-icon" class="fa-solid fa-moon"></i>
             </button>
@@ -488,40 +831,38 @@
                     <div class="lbl">✅ ผ่านแล้ว</div>
                 </div>
             </div>
+            
+            <button onclick="window.open('/portfolio', '_blank')" style="margin-top:18px; width:100%; background:linear-gradient(135deg, #f59e0b, #d97706); color:white; border:none; padding:12px; border-radius:12px; font-weight:600; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(245, 158, 11, 0.3); transition:all 0.2s;">
+                <i class="fa-solid fa-file-pdf"></i> ดาวน์โหลดแฟ้มสะสมผลงาน (Portfolio PDF)
+            </button>
         </div>
 
-        <!-- Upload Card -->
+        </div>
+
+        <!-- Reserved Activities System Card (ระบบกิจกรรมที่จอง) -->
         <div class="card">
-            <div class="card-header">
-                <div class="icon-circle" style="background:#dcfce7; color:#16a34a;">
-                    <i class="fa-solid fa-camera"></i>
-                </div>
-                ส่งภาพกิจกรรม / ยืนยันการเข้าร่วม
-            </div>
-            <div class="card-body">
-                <div id="today-alert" style="display:none;"></div>
-                <div id="upload-section" style="display:none;">
-                    <div class="upload-zone">
-                        <div class="form-group">
-                            <label><i class="fa-solid fa-list-check" style="color:#0284c7;"></i> เลือกกิจกรรมที่คุณต้องการส่งภาพ:</label>
-                            <select id="activity-select"></select>
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                             <label><i class="fa-solid fa-image" style="color:#0284c7;"></i> รูปภาพยืนยันการเข้าร่วม:</label>
-                             <input type="file" id="activity-file" accept="image/*" onchange="previewImage(this)">
-                             <div id="img-preview-box" style="display:none;margin-top:10px;">
-                                 <img id="img-preview" style="max-width:100%;max-height:200px;border-radius:10px;border:2px solid #e2e8f0;object-fit:cover;">
-                                 <div id="img-preview-info" style="font-size:12px;color:#64748b;margin-top:6px;"></div>
-                             </div>
-                         </div>
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div class="icon-circle" style="background:#f0f9ff; color:#0284c7;">
+                        <i class="fa-solid fa-bookmark"></i>
                     </div>
-                    <button class="btn-submit-work" style="margin-top:16px;" onclick="submitParticipation()">
-                        <i class="fa-solid fa-paper-plane"></i> ส่งผลงาน
-                    </button>
-                    <div id="upload-msg"></div>
+                    ระบบกิจกรรมที่จอง
+                </div>
+                <div class="filter-pills" style="display:flex; gap:6px;">
+                    <button class="pill-btn active" onclick="setRegFilter('active')" id="btn-filter-active">รายการจองปัจจุบัน</button>
+                    <button class="pill-btn" onclick="setRegFilter('cancelled')" id="btn-filter-cancelled">ยกเลิกแล้ว</button>
+                    <button class="pill-btn" onclick="setRegFilter('all')" id="btn-filter-all">ทั้งหมด</button>
+                </div>
+            </div>
+            <div id="reserved-activities-container">
+                <div class="empty-state">
+                    <div><i class="fa-solid fa-spinner fa-spin"></i></div>
+                    <div>กำลังโหลด...</div>
                 </div>
             </div>
         </div>
+
+        <!-- History Card -->
 
         <!-- History Card -->
         <div class="card">
@@ -536,6 +877,25 @@
                     <div><i class="fa-solid fa-spinner fa-spin"></i></div>
                     <div>กำลังโหลด...</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Contact Info Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="icon-circle" style="background:#f0fdf4; color:#16a34a;">
+                    <i class="fa-solid fa-envelope"></i>
+                </div>
+                ข้อมูลติดต่อ (อีเมลสำหรับติดต่อกลับ)
+            </div>
+            <div class="card-body" style="padding: 22px;">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:6px; display:block;">อีเมลนักศึกษา</label>
+                    <input type="email" id="profile-email" placeholder="example@snru.ac.th" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-family:inherit;">
+                </div>
+                <button class="btn-submit-work" style="margin-top:0; background:#16a34a;" onclick="updateProfileEmail()">
+                    <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลติดต่อ
+                </button>
             </div>
         </div>
 
@@ -568,21 +928,52 @@
             </div>
         </div>
 
-        <!-- My Registrations Card -->
-        <div class="card">
-            <div class="card-header">
-                <div class="icon-circle" style="background:#f0f9ff; color:#0284c7;">
-                    <i class="fa-solid fa-bookmark"></i>
-                </div>
-                การจองกิจกรรมของฉัน
+    </div>
+
+    <!-- Upload Proof Modal -->
+    <div class="modal-overlay" id="upload-proof-modal">
+        <div class="modal-content-box">
+            <div class="modal-header-custom">
+                <h3><i class="fa-solid fa-camera" style="color:#0284c7;"></i> ส่งภาพยืนยันการเข้าร่วม</h3>
+                <button class="modal-close-btn" onclick="closeUploadModal()">&times;</button>
             </div>
-            <div id="my-registrations-container">
-                <div class="empty-state">
-                    <div><i class="fa-solid fa-spinner fa-spin"></i></div>
-                    <div>กำลังโหลด...</div>
+            <div class="modal-body-custom">
+                <div class="modal-event-card">
+                    <div class="modal-event-title" id="modal-event-title">-</div>
+                    <div class="modal-event-meta">
+                        <i class="fa-solid fa-calendar-days"></i> วันที่จัดกิจกรรม: <span id="modal-event-date">-</span>
+                    </div>
                 </div>
+                
+                <input type="hidden" id="modal-event-id">
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label><i class="fa-solid fa-image" style="color:#0284c7;"></i> รูปภาพยืนยันการเข้าร่วม:</label>
+                    <div class="drag-drop-zone" id="modal-drag-drop-zone" onclick="document.getElementById('modal-activity-file').click()">
+                        <div class="drag-drop-icon">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <div class="drag-drop-text">ลากไฟล์รูปภาพมาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</div>
+                        <div class="drag-drop-subtext">รองรับเฉพาะไฟล์รูปภาพ (PNG, JPG, JPEG)</div>
+                    </div>
+                    <input type="file" id="modal-activity-file" accept="image/*" style="display:none;" onchange="previewModalImage(this)">
+                    
+                    <div id="modal-img-preview-box" style="display:none; margin-top:16px;">
+                        <img id="modal-img-preview" style="width:100%; max-height:220px; border-radius:12px; border:2px solid #e2e8f0; object-fit:cover; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                        <div id="modal-img-preview-info" style="font-size:12px; color:#64748b; margin-top:8px; display:flex; align-items:center; gap:6px;"></div>
+                    </div>
+                </div>
+                
+                <div id="modal-upload-msg" style="margin-top: 14px; padding: 10px; border-radius: 8px; font-size: 13px; text-align: center; display: none;"></div>
+            </div>
+            <div class="modal-footer-custom">
+                <button class="btn-secondary" onclick="closeUploadModal()">ยกเลิก</button>
+                <button class="btn-submit-work" id="modal-submit-btn" style="width:auto; padding: 10px 24px; font-size: 14px;" onclick="submitParticipation()">
+                    <i class="fa-solid fa-paper-plane"></i> ส่งผลงาน
+                </button>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- Shared Toast container is handled by ui-shared.js -->
@@ -593,62 +984,141 @@
 
         let currentUser = null;
         let todayISODate = "";
+        window.currentRegFilter = 'active'; // Default: only show active bookings
+
+        function setRegFilter(filterType) {
+            window.currentRegFilter = filterType;
+            // Update active pill button style
+            document.querySelectorAll('.filter-pills .pill-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById('btn-filter-' + filterType);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            // Reload registrations
+            loadMyRegistrations();
+        }
+
         const thaiMonthsFull = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
         const thaiMonthsAbbr = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 
         async function loadMyRegistrations() {
-            const container = document.getElementById('my-registrations-container');
+            const container = document.getElementById('reserved-activities-container');
             try {
                 const res = await fetch('/api/my/registrations');
                 const data = await res.json();
                 if (!Array.isArray(data) || !data.length) {
-                    container.innerHTML = '<div class="empty-state"><div><i class="fa-solid fa-bookmark" style="font-size:28px;opacity:0.3;"></i></div><div>ยังไม่ได้จองกิจกรรมใดๆ</div></div>';
+                    container.innerHTML = `
+                    <div class="empty-state">
+                        <div><i class="fa-solid fa-calendar-xmark" style="font-size:32px;opacity:0.3;margin-bottom:12px;"></i></div>
+                        <div>ยังไม่มีกิจกรรมที่ยืนยันการจอง...</div>
+                    </div>`;
                     return;
                 }
+
+                // Filter registrations based on active filter
+                let filteredData = data;
+                if (window.currentRegFilter === 'active') {
+                    filteredData = data.filter(r => r.status !== 'cancelled');
+                } else if (window.currentRegFilter === 'cancelled') {
+                    filteredData = data.filter(r => r.status === 'cancelled');
+                }
+
+                if (!filteredData.length) {
+                    let emptyMsg = "ยังไม่มีกิจกรรมที่จองไว้ในขณะนี้...";
+                    if (window.currentRegFilter === 'cancelled') {
+                        emptyMsg = "ไม่มีรายการจองที่ถูกยกเลิก...";
+                    } else if (window.currentRegFilter === 'active') {
+                        emptyMsg = "ไม่มีรายการจองที่กำลังดำเนินการอยู่ในขณะนี้...";
+                    }
+                    container.innerHTML = `
+                    <div class="empty-state">
+                        <div><i class="fa-solid fa-calendar-xmark" style="font-size:32px;opacity:0.3;margin-bottom:12px;"></i></div>
+                        <div>${emptyMsg}</div>
+                    </div>`;
+                    return;
+                }
+                
                 const statusMap = {
-                    confirmed: { label: '✅ ยืนยันแล้ว', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-                    pending:   { label: '⏳ รอยืนยัน', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
-                    cancelled: { label: '❌ ยกเลิกแล้ว', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' }
+                    confirmed: { label: '✅ ยืนยันแล้ว', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', cssClass: 'status-confirmed' },
+                    pending:   { label: '⏳ รอยืนยัน', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a', cssClass: 'status-pending' },
+                    cancelled: { label: '❌ ยกเลิกแล้ว', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1', cssClass: 'status-cancelled' }
                 };
+                
                 // Sort: newest first
-                data.sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||''));
+                filteredData.sort((a,b) => (b.timestamp||'').localeCompare(a.timestamp||''));
+                
                 let html = '<div style="display:flex;flex-direction:column;gap:12px;padding:16px;">';
-                data.forEach(r => {
+                filteredData.forEach(r => {
                     const s = statusMap[r.status] || statusMap.pending;
                     const dateStr = r.timestamp ? r.timestamp.split('T')[0] : '-';
-                    const canUpload = r.status === 'confirmed';
+                    
+                    // Check if this event already has a submission in studentHistory
+                    const submission = (window.studentHistory || []).find(h => h.event_id === r.event_id);
+                    let subStatusHtml = '';
+                    let isAlreadyApproved = false;
+                    let isAlreadyPending = false;
+                    
+                    if (submission) {
+                        if (submission.status === 'approved') {
+                            subStatusHtml = `<span style="font-size:11px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;padding:2px 8px;border-radius:6px;font-weight:600;"><i class="fa-solid fa-circle-check"></i> ผ่านแล้ว</span>`;
+                            isAlreadyApproved = true;
+                        } else if (submission.status === 'rejected') {
+                            subStatusHtml = `<span style="font-size:11px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:2px 8px;border-radius:6px;font-weight:600;"><i class="fa-solid fa-circle-xmark"></i> ไม่ผ่าน (ส่งใหม่ได้)</span>`;
+                        } else {
+                            subStatusHtml = `<span style="font-size:11px;background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;padding:2px 8px;border-radius:6px;font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> รอตรวจสอบภาพ</span>`;
+                            isAlreadyPending = true;
+                        }
+                    }
+                    
+                    // Click handler
+                    let clickAction = '';
+                    if (r.status === 'confirmed') {
+                        if (isAlreadyApproved) {
+                            clickAction = `onclick="toast('กิจกรรมนี้ได้รับการอนุมัติและบันทึกคะแนนเรียบร้อยแล้ว', 'success')"`;
+                        } else if (isAlreadyPending) {
+                            clickAction = `onclick="toast('ภาพกิจกรรมของคุณกำลังอยู่ระหว่างการตรวจสอบความถูกต้อง', 'info')"`;
+                        } else {
+                            clickAction = `onclick="openUploadModal('${j(r.event_id)}', '${j(r.event_title)}', '${j(r.event_date)}')"`;
+                        }
+                    } else if (r.status === 'pending') {
+                        clickAction = `onclick="toast('กรุณารอเจ้าหน้าที่อนุมัติการจองเข้าร่วมกิจกรรมก่อนส่งผลงาน', 'warning')"`;
+                    } else if (r.status === 'cancelled') {
+                        clickAction = `onclick="toast('การจองกิจกรรมนี้ถูกยกเลิกแล้ว ไม่สามารถดำเนินการส่งผลงานได้', 'error')"`;
+                    }
+                    
                     html += `
-                    <div style="background:${s.bg};border:1px solid ${s.border};border-radius:12px;padding:14px 16px;">
+                    <div class="reserved-activity-item ${s.cssClass}" ${clickAction}>
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-                            <div style="flex:1;">
-                                <div style="font-weight:700;font-size:15px;color:#0f172a;margin-bottom:4px;">${h(r.event_title)}</div>
-                                <div style="font-size:12px;color:#64748b;">
-                                    <i class="fa-solid fa-calendar-days" style="margin-right:4px;"></i>${h(r.event_date)}
-                                    &nbsp;&nbsp;<i class="fa-solid fa-clock" style="margin-right:4px;"></i>จองวันที่: ${h(dateStr)}
+                            <div style="flex:1;min-width:200px;">
+                                <div style="font-weight:700;font-size:15px;margin-bottom:6px;color:#1e293b;" class="history-title">
+                                    ${h(r.event_title)}
+                                </div>
+                                <div style="font-size:12px;color:#64748b;display:flex;flex-wrap:wrap;gap:10px 16px;" class="history-date">
+                                    <span><i class="fa-solid fa-calendar-days" style="margin-right:4px;color:#0284c7;"></i>วันที่จัด: ${h(r.event_date)}</span>
+                                    <span><i class="fa-solid fa-clock" style="margin-right:4px;color:#0284c7;"></i>จองเมื่อ: ${h(dateStr)}</span>
                                 </div>
                             </div>
-                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-                                <span style="background:white;color:${s.color};border:1px solid ${s.border};padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;">${h(s.label)}</span>
-                                <div style="display:flex; gap: 4px;">
-                                    ${canUpload ? `<button onclick="prepareUpload('${j(r.event_id)}', '${j(r.event_title)}', '${j(r.event_date)}')"
-                                        style="font-size:11px;background:#16a34a;border:none;color:white;padding:4px 12px;border-radius:8px;cursor:pointer;font-family:Kanit,sans-serif;font-weight:600;">
-                                        <i class="fa-solid fa-upload"></i> อัปโหลดหลักฐาน
-                                    </button>` : ''}
-                                    ${r.status !== 'cancelled' ? `<button onclick="cancelMyReg('${j(r.id)}')"
-                                        style="font-size:11px;background:none;border:1px solid #fca5a5;color:#dc2626;padding:3px 10px;border-radius:8px;cursor:pointer;font-family:Kanit,sans-serif;">
-                                        <i class="fa-solid fa-xmark"></i> ยกเลิก
-                                    </button>` : ''}
-                                </div>
+                            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                                ${subStatusHtml}
+                                <span style="background:white;color:${s.color};border:1px solid ${s.border};padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;display:inline-block;white-space:nowrap;">
+                                    ${h(s.label)}
+                                </span>
+                                ${r.status !== 'cancelled' ? `
+                                <button onclick="event.stopPropagation(); cancelMyReg('${j(r.id)}')"
+                                    style="font-size:11px;background:none;border:1px solid #fca5a5;color:#dc2626;padding:4px 10px;border-radius:8px;cursor:pointer;font-family:Kanit,sans-serif;transition:all 0.2s;display:inline-flex;align-items:center;gap:4px;"
+                                    onmouseover="this.style.background='#fef2f2'"
+                                    onmouseout="this.style.background='none'">
+                                    <i class="fa-solid fa-xmark"></i> ยกเลิกการจอง
+                                </button>` : ''}
                             </div>
                         </div>
                     </div>`;
                 });
                 html += '</div>';
                 container.innerHTML = html;
-                
-                // Also update the main upload dropdown
-                updateUploadDropdown(data);
             } catch(e) {
+                console.error(e);
                 container.innerHTML = '<div class="empty-state"><div>ไม่สามารถโหลดข้อมูลได้</div></div>';
             }
         }
@@ -660,65 +1130,88 @@
                 body: JSON.stringify({status: 'cancelled'})
             });
             if (res.ok) { 
-                loadMyRegistrations(); 
-                toast('\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e01\u0e32\u0e23\u0e08\u0e2d\u0e07\u0e41\u0e25\u0e49\u0e27', 'info');
+                await initProfile(); 
+                toast('ยกเลิกการจองแล้ว', 'info');
             }
-            else { toast('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14 \u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48', 'error'); }
+            else { toast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error'); }
         }
 
-
-        function prepareUpload(eventId, eventTitle, eventDate) {
-            const select = document.getElementById('activity-select');
+        function openUploadModal(eventId, eventTitle, eventDate) {
+            document.getElementById('modal-event-id').value = eventId;
+            document.getElementById('modal-event-title').textContent = eventTitle;
+            document.getElementById('modal-event-date').textContent = eventDate;
             
-            // Ensure the event is in the select
-            let opt = Array.from(select.options).find(o => o.value === eventId);
-            if (opt) {
-                select.value = eventId;
-            }
+            document.getElementById('modal-activity-file').value = '';
+            document.getElementById('modal-img-preview-box').style.display = 'none';
             
-            // Store the event date to form
-            todayISODate = eventDate;
-
-            // Scroll to upload section
-            document.querySelector('.card:nth-of-type(1)').scrollIntoView({ behavior: 'smooth' });
+            const msgEl = document.getElementById('modal-upload-msg');
+            msgEl.style.display = 'none';
+            msgEl.textContent = '';
             
-            // Visual feedback
-            const uploadZone = document.querySelector('.upload-zone');
-            uploadZone.style.borderColor = '#16a34a';
-            setTimeout(() => uploadZone.style.borderColor = '#cbd5e1', 1000);
+            const modal = document.getElementById('upload-proof-modal');
+            modal.classList.add('active');
+            
+            setupDragAndDrop();
         }
 
-        function updateUploadDropdown(registrations) {
-            const select = document.getElementById('activity-select');
-            const uploadSec = document.getElementById('upload-section');
-            const alertBox = document.getElementById('today-alert');
+        function closeUploadModal() {
+            const modal = document.getElementById('upload-proof-modal');
+            modal.classList.remove('active');
+        }
 
-            const confirmedRegs = registrations.filter(r => r.status === 'confirmed');
-
-            if (confirmedRegs.length === 0) {
-                alertBox.className = 'alert alert-info';
-                alertBox.innerHTML = `<i class="fa-solid fa-circle-info"></i><div><strong>ยังไม่มีกิจกรรมที่ยืนยันการจอง</strong><br><span style="font-size:13px;">กรุณาจองกิจกรรมในหน้าหลักและรอการยืนยันก่อนส่งผลงาน</span></div>`;
-                alertBox.style.display = 'flex';
-                uploadSec.style.display = 'none';
+        function previewModalImage(input) {
+            const box = document.getElementById('modal-img-preview-box');
+            const img = document.getElementById('modal-img-preview');
+            const info = document.getElementById('modal-img-preview-info');
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+                const reader = new FileReader();
+                reader.onload = e => { img.src = e.target.result; };
+                reader.readAsDataURL(file);
+                box.style.display = 'block';
+                const sizeColor = file.size > 5 * 1024 * 1024 ? '#f59e0b' : '#16a34a';
+                const sizeWarn = file.size > 5 * 1024 * 1024 ? ' ⚠️ ไฟล์ใหญ่เกิน 5MB' : '';
+                info.innerHTML = `<i class="fa-solid fa-file-image" style="color:${sizeColor};"></i> ${file.name} — <span style="color:${sizeColor};font-weight:600;">${sizeMB} MB</span>${sizeWarn}`;
             } else {
-                alertBox.style.display = 'none';
-                uploadSec.style.display = 'block';
-                const currentVal = select.value;
-                select.innerHTML = '<option value="">-- เลือกกิจกรรมที่คุณจองไว้ --</option>';
-                confirmedRegs.forEach(r => {
-                    const opt = document.createElement('option');
-                    opt.value = r.event_id;
-                    opt.textContent = r.event_title;
-                    opt.setAttribute('data-date', r.event_date);
-                    select.appendChild(opt);
-                });
-                if (currentVal) select.value = currentVal;
-                
-                select.onchange = () => {
-                    const selected = select.options[select.selectedIndex];
-                    todayISODate = selected.getAttribute('data-date') || "";
-                };
+                box.style.display = 'none';
             }
+        }
+
+        function setupDragAndDrop() {
+            const zone = document.getElementById('modal-drag-drop-zone');
+            const fileInput = document.getElementById('modal-activity-file');
+            
+            if (!zone) return;
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                zone.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                zone.addEventListener(eventName, () => {
+                    zone.classList.add('dragover');
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                zone.addEventListener(eventName, () => {
+                    zone.classList.remove('dragover');
+                }, false);
+            });
+            
+            zone.addEventListener('drop', e => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files && files.length) {
+                    fileInput.files = files;
+                    previewModalImage(fileInput);
+                }
+            }, false);
         }
 
         async function initProfile() {
@@ -735,45 +1228,66 @@
                 document.getElementById('user-major').textContent = currentUser.major || currentUser.branch || '-';
                 document.getElementById('user-year').textContent = currentUser.year ? 'ชั้นปีที่ ' + currentUser.year : 'ไม่ระบุชั้นปี';
 
+                if (document.getElementById('profile-email')) {
+                    document.getElementById('profile-email').value = currentUser.email || '';
+                }
+
                 const resEvt = await fetch('/api/events');
                 const rawEvtData = await resEvt.json();
-                // Handle paginated or flat response
                 const allEvents = Array.isArray(rawEvtData) ? rawEvtData : (rawEvtData.events || []);
-                fetchStudentHistory(allEvents);
-                loadMyRegistrations();
+                await fetchStudentHistory(allEvents);
+                await loadMyRegistrations();
             } catch(e) { console.error(e); }
         }
 
         async function submitParticipation() {
-            const select = document.getElementById('activity-select');
-            const fileInput = document.getElementById('activity-file');
-            const msgEl = document.getElementById('upload-msg');
-            const btn = document.querySelector('#upload-section button');
+            const eventId = document.getElementById('modal-event-id').value;
+            const eventTitle = document.getElementById('modal-event-title').textContent;
+            const eventDate = document.getElementById('modal-event-date').textContent;
+            const fileInput = document.getElementById('modal-activity-file');
+            const msgEl = document.getElementById('modal-upload-msg');
+            const submitBtn = document.getElementById('modal-submit-btn');
 
             const showUploadMsg = (text, type) => {
+                msgEl.style.display = 'block';
                 msgEl.textContent = text;
                 msgEl.className = 'visible ' + type;
+                if (type === 'error') {
+                    msgEl.style.background = '#fef2f2';
+                    msgEl.style.color = '#dc2626';
+                } else if (type === 'success') {
+                    msgEl.style.background = '#f0fdf4';
+                    msgEl.style.color = '#16a34a';
+                } else if (type === 'loading') {
+                    msgEl.style.background = '#f8fafc';
+                    msgEl.style.color = '#64748b';
+                }
             };
 
-            if (!select.value) { showUploadMsg('กรุณาเลือกกิจกรรม', 'error'); return; }
+            if (!eventId) { showUploadMsg('ข้อมูลกิจกรรมไม่ถูกต้อง', 'error'); return; }
             if (!fileInput.files || fileInput.files.length === 0) { showUploadMsg('กรุณาอัปโหลดรูปภาพ', 'error'); return; }
 
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            formData.append('event_id', select.value);
-            formData.append('event_title', select.options[select.selectedIndex].text);
-            formData.append('event_date', todayISODate);
+            formData.append('event_id', eventId);
+            formData.append('event_title', eventTitle);
+            formData.append('event_date', eventDate);
 
+            submitBtn.disabled = true;
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่งข้อมูล...';
             showUploadMsg('กำลังส่งข้อมูล...', 'loading');
+
             try {
                 const res = await fetch('/api/student/participate', { method: 'POST', body: formData });
                 const data = await res.json();
                 if (res.ok) {
                     toast('ส่งข้อมูลสำเร็จ! ระบบจะตรวจสอบผลงานของคุณต่อไป', 'success');
                     fileInput.value = '';
-                    document.getElementById('img-preview-box').style.display = 'none';
+                    document.getElementById('modal-img-preview-box').style.display = 'none';
                     showUploadMsg('ส่งเรียบร้อยแล้ว', 'success');
-                    fetchStudentHistory(); // Refresh history
+                    closeUploadModal();
+                    await initProfile(); 
                 } else {
                     toast(data.message || 'เกิดข้อผิดพลาดในการส่งข้อมูล', 'error');
                     showUploadMsg(data.message || 'เกิดข้อผิดพลาด', 'error');
@@ -790,6 +1304,7 @@
             try {
                 const res = await fetch('/api/student/history');
                 const history = await res.json();
+                window.studentHistory = history; // Store globally for filtering dropdown options
                 const container = document.getElementById('participation-history');
 
                 if (history.length === 0) {
@@ -927,6 +1442,40 @@
                     document.getElementById('cp-confirm').value = '';
                 } else {
                     toast(data.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้', 'error');
+                }
+            } catch (e) {
+                toast('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        async function updateProfileEmail() {
+            const email = document.getElementById('profile-email').value.trim();
+            
+            if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                toast('รูปแบบอีเมลไม่ถูกต้อง', 'warning');
+                return;
+            }
+            
+            const btn = document.querySelector('button[onclick="updateProfileEmail()"]');
+            btn.disabled = true;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+            
+            try {
+                const res = await fetch('/api/user/update-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    toast('บันทึกข้อมูลติดต่อเรียบร้อยแล้ว', 'success');
+                    if (currentUser) currentUser.email = email;
+                } else {
+                    toast(data.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
                 }
             } catch (e) {
                 toast('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');

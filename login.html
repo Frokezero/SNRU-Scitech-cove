@@ -530,9 +530,13 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    showMsg('✓ เข้าสู่ระบบสำเร็จ กำลังพาไปหน้าหลัก...', 'success');
+                    showMsg('✓ เข้าสู่ระบบสำเร็จ กำลังพาไป...', 'success');
                     setTimeout(() => {
-                        if (data.user && (data.user.role === 'admin' || data.user.role === 'major')) {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const nextUrl = urlParams.get('next');
+                        if (nextUrl) {
+                            window.location.href = nextUrl;
+                        } else if (data.user && (data.user.role === 'admin' || data.user.role === 'major')) {
                             window.location.href = '/admin';
                         } else {
                             window.location.href = '/';
@@ -611,8 +615,15 @@
         // Auto-redirect if already logged in
         fetch('/api/me').then(r => r.json()).then(d => {
             if (d.success) {
-                if (d.user.role === 'admin' || d.user.role === 'major') window.location.href = '/admin';
-                else window.location.href = '/';
+                const urlParams = new URLSearchParams(window.location.search);
+                const nextUrl = urlParams.get('next');
+                if (nextUrl) {
+                    window.location.href = nextUrl;
+                } else if (d.user.role === 'admin' || d.user.role === 'major') {
+                    window.location.href = '/admin';
+                } else {
+                    window.location.href = '/';
+                }
             }
         }).catch(() => {});
     </script>

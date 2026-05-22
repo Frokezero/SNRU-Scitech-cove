@@ -4,6 +4,7 @@ let userRegistrations = new Set();
 let carouselImages = [];
 let carouselIndex = 0;
 let carouselTimer = null;
+let _notifIntervalStarted = false;
 
 // Global Mobile Menu Toggle
 window.toggleMobileMenu = function() {
@@ -13,6 +14,17 @@ window.toggleMobileMenu = function() {
     }
 };
 
+// ===== GLOBAL HELPERS =====
+function h(text) {
+    if (!text) return '';
+    return text.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const cardsContainer = document.getElementById('cards-container');
     const monthFiltersContainer = document.getElementById('month-filters');
@@ -21,17 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const thaiMonthsFull = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
     const thaiMonthsAbbr = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-    
-    // HTML Escaping Helper
-    function h(text) {
-        if (!text) return '';
-        return text.toString()
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-    }
 
     // JS String Escaping Helper
     function j(text) {
@@ -205,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderCards();
         } catch(e) {
             console.error(e);
-            cardsContainer.innerHTML = '<div class="no-events"><i class="fa-solid fa-circle-exclamation"></i><p>ไม่สามารถดึงข้อมูลกิจกรรมได้ กรุณาตรวจสอบว่าเปิด Server แล้ว</p></div>';
+            cardsContainer.innerHTML = '<div class="no-events"><div class="no-events-icon"><i class="fa-solid fa-circle-exclamation"></i></div><h3>ไม่สามารถโหลดข้อมูลได้</h3><p>กรุณาตรวจสอบว่าเซิร์ฟเวอร์เปิดอยู่ แล้วลองรีเฟรชหน้าใหม่</p></div>';
         }
     }
 
@@ -398,7 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (append) renderedCount += cardsPerPage;
 
         if (totalToDisplay === 0) {
-            cardsContainer.innerHTML = '<div class="no-events"><i class="fa-solid fa-calendar-xmark"></i><p>ไม่พบกิจกรรมที่ตรงกับเงื่อนไข</p></div>';
+            const monthName = currentFilter !== 'all' ? thaiMonthsFull[parseInt(currentFilter.split('-')[1])] : '';
+            const msg = monthName ? `ยังไม่มีกิจกรรมในเดือน${monthName}` : 'ไม่พบกิจกรรมที่ตรงกับเงื่อนไข';
+            const sub = monthName ? 'ติดตามกิจกรรมใหม่ได้เร็วๆ นี้ หรือลองเลือกเดือนอื่น' : 'ลองเปลี่ยนเดือนหรือสาขาวิชาที่ต้องการค้นหา';
+            cardsContainer.innerHTML = `<div class="no-events"><div class="no-events-icon"><i class="fa-solid fa-calendar-xmark"></i></div><h3>${msg}</h3><p>${sub}</p></div>`;
             document.getElementById('loading-more').style.display = 'none';
             return;
         }
@@ -558,8 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let d = 1; d <= daysInMonth; d++) {
             const dayEl = document.createElement('div');
             const isToday = d === new Date().getDate() && targetM === new Date().getMonth() && targetY === new Date().getFullYear();
-            dayEl.className = 'cal-day' + (isToday ? ' today' : '');
-            dayEl.innerHTML = `<div class="cal-day-num">${d}</div>`;
             
             // Events for this day
             const dayEvents = parsedEventsList.filter(e => {
@@ -569,17 +571,123 @@ document.addEventListener('DOMContentLoaded', () => {
                 return d >= e.start.day && d <= e.end.day;
             });
             
+            const hasEvents = dayEvents.length > 0;
+            dayEl.className = 'cal-day' + (isToday ? ' today' : '') + (hasEvents ? ' has-events' : '');
+            dayEl.innerHTML = `<div class="cal-day-num">${d}</div>`;
+            
             dayEvents.forEach(e => {
                 const tag = document.createElement('div');
                 tag.className = 'cal-event-tag';
-                tag.textContent = e.title;
-                tag.title = e.title;
+                tag.textContent = e.title.replace(/\*$/, '');
                 tag.onclick = (ev) => {
                     ev.stopPropagation();
                     openEventDetail(e);
                 };
                 dayEl.appendChild(tag);
             });
+            
+            if (hasEvents) {
+                let hideTimeout = null;
+                const popover = document.getElementById('calendar-popover');
+                
+                const showPopover = (ev) => {
+                    clearTimeout(hideTimeout);
+                    if (!popover) return;
+                    
+                    // Build popover content
+                    let eventsHtml = '';
+                    dayEvents.forEach(e => {
+                        let catLabel = 'ชมรม/ทั่วไป';
+                        let catClass = 'cat-club';
+                        if (e.category === 'กิจกรรมมหาวิทยาลัย') {
+                            catLabel = 'มหาวิทยาลัย';
+                            catClass = 'cat-uni';
+                        } else if ((e.owner && (e.owner.includes('สาขาวิชา') || e.owner.includes('คณะ'))) || e.category === 'กิจกรรมสาขาวิชา') {
+                            catLabel = 'คณะ/สาขา';
+                            catClass = 'cat-major';
+                        }
+                        
+                        eventsHtml += `
+                            <div class="popover-item">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                                    <span class="category-badge ${catClass}" style="font-size:8px; padding: 2px 8px; margin-bottom:0;">${catLabel}</span>
+                                    <span style="font-size:9px; color:var(--primary); font-weight:700;">⭐ ${e.max_participants > 0 ? `${e.registered_count}/${e.max_participants}` : 'ไม่จำกัด'}</span>
+                                </div>
+                                <div class="popover-item-title">${h(e.title.replace(/\*$/, ''))}</div>
+                                <div class="popover-item-meta">
+                                    <span><i class="fa-solid fa-location-dot"></i> ${h(e.location || 'คณะวิทยาศาสตร์ฯ')}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    popover.innerHTML = `
+                        <div class="popover-header">
+                            <span>📅 กิจกรรมวันที่ ${d} ${thaiMonthsFull[targetM]}</span>
+                            <span style="font-size:10px; color:var(--slate-400);">${dayEvents.length} รายการ</span>
+                        </div>
+                        <div class="popover-list">${eventsHtml}</div>
+                    `;
+                    
+                    // Add click event listener to popover items to open details
+                    popover.querySelectorAll('.popover-item').forEach((item, index) => {
+                        item.addEventListener('click', (clickEv) => {
+                            clickEv.stopPropagation();
+                            openEventDetail(dayEvents[index]);
+                            popover.classList.remove('active');
+                        });
+                    });
+                    
+                    // Position popover
+                    popover.classList.add('active');
+                    const rect = dayEl.getBoundingClientRect();
+                    const popRect = popover.getBoundingClientRect();
+                    
+                    // Default position: Above the day cell
+                    let top = rect.top + window.scrollY - popRect.height - 10;
+                    let left = rect.left + window.scrollX + (rect.width - popRect.width) / 2;
+                    
+                    // Prevent overflow: if too high, show below the day cell
+                    if (top < window.scrollY + 10) {
+                        top = rect.bottom + window.scrollY + 10;
+                    }
+                    // Prevent overflow left/right
+                    if (left < 10) left = 10;
+                    if (left + popRect.width > window.innerWidth - 10) {
+                        left = window.innerWidth - popRect.width - 10;
+                    }
+                    
+                    popover.style.top = `${top}px`;
+                    popover.style.left = `${left}px`;
+                };
+                
+                const startHidePopover = () => {
+                    hideTimeout = setTimeout(() => {
+                        if (popover) popover.classList.remove('active');
+                    }, 300);
+                };
+                
+                dayEl.addEventListener('mouseenter', showPopover);
+                dayEl.addEventListener('mouseleave', startHidePopover);
+                
+                // Keep popover open when hovered
+                popover.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+                popover.addEventListener('mouseleave', () => {
+                    hideTimeout = setTimeout(() => {
+                        popover.classList.remove('active');
+                    }, 300);
+                });
+                
+                // Toggle for tap/mobile
+                dayEl.addEventListener('click', (ev) => {
+                    if (ev.target.closest('.cal-event-tag')) return; // let original click work
+                    if (popover.classList.contains('active')) {
+                        popover.classList.remove('active');
+                    } else {
+                        showPopover(ev);
+                    }
+                });
+            }
             
             grid.appendChild(dayEl);
         }
@@ -617,20 +725,27 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const resStatus = await fetch(`/api/events/${id}/my-registration`);
             const statusData = await resStatus.json();
-            if (statusData.registered) {
+            if (statusData && statusData.id) {
                 toast('คุณได้จองกิจกรรมนี้ไปแล้ว', 'info');
                 return;
             }
         } catch(e) {}
 
-        document.getElementById('reg-title').textContent = title;
+        const regTitleEl = document.getElementById('reg-title');
         const confirmBtn = document.getElementById('reg-confirm-btn');
+        const regModal = document.getElementById('reg-confirm-modal');
+        if (!regTitleEl || !confirmBtn || !regModal) {
+            toast('ไม่สามารถเปิดหน้าจอยืนยันการจองได้', 'error');
+            return;
+        }
+        regTitleEl.textContent = title;
         confirmBtn.onclick = () => registerEvent(id);
-        document.getElementById('reg-confirm-modal').classList.add('open');
+        regModal.classList.add('open');
     };
 
     window.closeRegisterConfirm = () => {
-        document.getElementById('reg-confirm-modal').classList.remove('open');
+        const regModal = document.getElementById('reg-confirm-modal');
+        if (regModal) regModal.classList.remove('open');
     };
 
     async function registerEvent(id) {
@@ -936,34 +1051,20 @@ function updateTicker() {
 }
 
 // ===== NOTIFICATIONS =====
-let _notifIntervalStarted = false;
 async function initNotifications() {
     const containers = document.querySelectorAll('.notification-container');
-    if (containers.length === 0) return;
-    
-    if (!currentUser) {
-        containers.forEach(c => c.style.display = 'none');
-        return;
-    }
-    
-    // Show for ALL logged-in roles
     containers.forEach(c => {
-        // Only show if it's not explicitly hidden by device classes (controlled by CSS)
-        c.style.display = 'inline-block';
+        c.style.setProperty('display', 'none', 'important');
     });
-    updateUnreadCount();
-    
-    // Polling every 30 seconds — start only once
-    if (!_notifIntervalStarted) {
-        _notifIntervalStarted = true;
-        setInterval(updateUnreadCount, 30000);
-    }
+    // Disabled as notifications system is removed
 }
 
 async function updateUnreadCount() {
     try {
         const res = await fetch('/api/notifications/unread-count');
+        if (!res.ok) return;
         const data = await res.json();
+        if (typeof data.count !== 'number') return;
         // Update all badges (Desktop and Mobile)
         const badges = document.querySelectorAll('.notif-badge');
         badges.forEach(badge => {
@@ -974,7 +1075,7 @@ async function updateUnreadCount() {
                 badge.style.display = 'none';
             }
         });
-    } catch(e) {}
+    } catch(e) {console.error('Unread count error:', e);}
 }
 
 window.toggleNotifications = async function(event) {
@@ -1029,8 +1130,12 @@ async function renderNotifications() {
     
     try {
         const res = await fetch('/api/notifications');
-        if (!res.ok) throw new Error('Load failed');
+        if (!res.ok) {
+            lists.forEach(l => l.innerHTML = '<div class="notif-empty"><i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;"></i> ไม่สามารถโหลดข้อมูลได้</div>');
+            return;
+        }
         const notifs = await res.json();
+        if (!Array.isArray(notifs)) throw new Error('Invalid response');
         
         lists.forEach(list => {
             if (!Array.isArray(notifs) || notifs.length === 0) {
@@ -1042,11 +1147,14 @@ async function renderNotifications() {
             notifs.forEach(n => {
                 const item = document.createElement('div');
                 item.className = `notif-item ${n.is_read ? '' : 'unread'} ${n.type || ''}`;
-                item.onclick = () => markAsRead(n.id, item);
+                if (n.id) item.onclick = () => markAsRead(n.id, item);
                 
-                const time = new Date(n.created_at).toLocaleString('th-TH', { 
+let time = 'เมื่อสักครู่';
+            try {
+                time = new Date(n.created_at).toLocaleString('th-TH', { 
                     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' 
                 });
+            } catch(e) {}
                 
                 const typeIcon = {
                     'success': '<i class="fa-solid fa-circle-check" style="color:#10b981;"></i>',
@@ -1077,7 +1185,11 @@ async function renderNotifications() {
 async function markAsRead(id, element) {
     closeNotifications();
     try {
-        const res = await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+        const res = await fetch('/api/notifications/mark-as-read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
         if (res.ok) {
             if (element) {
                 element.classList.remove('unread');
@@ -1095,10 +1207,12 @@ window.markAllAsRead = async function() {
             el.classList.remove('unread');
             el.style.borderLeft = '';
         });
-        const badge = document.getElementById('notif-badge');
-        if (badge) badge.style.display = 'none';
+        // Update all badges (Desktop and Mobile)
+        document.querySelectorAll('.notif-badge').forEach(badge => {
+            badge.style.display = 'none';
+        });
         updateUnreadCount();
-    } catch(e) {}
+    } catch(e) { console.error(e); }
 }
 
 (function setupSwipeClose() {

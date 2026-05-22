@@ -1,5 +1,17 @@
 [
     {
+        "id": "reg_7c7fff9ab7",
+        "event_id": "ffcefd63-ac95-4fde-ba2a-a87e625aaef5",
+        "event_title": "รายงานตัวนักศึกษาใหม่",
+        "event_date": "11-18 พ.ค. 69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-11T12:15:54",
+        "status": "cancelled"
+    },
+    {
         "id": "reg_f210a8bd29",
         "event_id": "3efa4e94-db83-4d0f-ba41-5afddd151de5",
         "event_title": "กิจกรรมเฝําระวังและปํองกันโรคพิษสุนัขบ้า",
@@ -21,7 +33,7 @@
         "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
         "email": "kritsada.sr67@snru.ac.th",
         "timestamp": "2026-05-11T09:12:48",
-        "status": "confirmed"
+        "status": "cancelled"
     },
     {
         "id": "reg_36e06f614e",
@@ -33,6 +45,138 @@
         "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
         "email": "pajaree.su67@snru.ac.th",
         "timestamp": "2026-05-11T09:25:42",
+        "status": "confirmed"
+    },
+    {
+        "id": "reg_a9eaede075",
+        "event_id": "f9b383c1-eb77-4a04-90de-72f4fbc107c9",
+        "event_title": "ค่ายผู้นํานักศึกษามหาวิทยาลัยราชภัฏทั่วประเทศ ครั้งที่ 3 (RYL)",
+        "event_date": "11-15 พ.ค. 69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-11T13:11:11",
+        "status": "cancelled"
+    },
+    {
+        "id": "reg_1ac61f783a",
+        "event_id": "ffcefd63-ac95-4fde-ba2a-a87e625aaef5",
+        "event_title": "รายงานตัวนักศึกษาใหม่",
+        "event_date": "11-18 พ.ค. 69",
+        "username": "67102105101",
+        "name": "รัตติพงศ์ ปาข้างฮุง",
+        "major": "สาขาวิชาวิทยาการคอมพิวเตอร์",
+        "email": "rattiphong.pa67@snru.ac.th",
+        "timestamp": "2026-05-11T14:02:08",
+        "status": "confirmed"
+    },
+    {
+        "id": "reg_654184e14c",
+        "event_id": "ffcefd63-ac95-4fde-ba2a-a87e625aaef5",
+        "event_title": "รายงานตัวนักศึกษาใหม่",
+        "event_date": "11-18 พ.ค. 69",
+        "username": "67102122134",
+        "name": "ศุภกฤต ภูลายยาว",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "Suppakit.pu67@snru.ac.th",
+        "timestamp": "2026-05-11T14:42:58",
+        "status": "confirmed"
+    },
+    {
+        "id": "reg_8f323f3245",
+        "event_id": "ed31f4bb-0497-4018-9cf4-1e096d05f40a",
+        "event_title": "กิจกรรมอบรมด้านการปฐมพยาบาลเบื้องต้นและการช่วยฟื้นคืนชีพขั้นพื้นฐาน (CPR)",
+        "event_date": "1 พ.ค.69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-21T10:32:11",
+        "status": "cancelled"
+    },
+    {
+        "id": "reg_cefa8bb15f",
+        "event_id": "ed31f4bb-0497-4018-9cf4-1e096d05f40a",
+        "event_title": "กิจกรรมอบรมด้านการปฐมพยาบาลเบื้องต้นและการช่วยฟื้นคืนชีพขั้นพื้นฐาน (CPR)",
+        "event_date": "1 พ.ค.69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-21T11:30:58",
+        "status": "cancelled"
+    },
+    {
+        "id": "reg_d127e72334",
+        "event_id": "ed31f4bb-0497-4018-9cf4-1e096d05f40a",
+        "event_title": "กิจกรรมอบรมด้านการปฐมพยาบาลเบื้องต้นและการช่วยฟื้นคืนชีพขั้นพื้นฐาน (CPR)",
+        "event_date": "1 พ.ค.69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-21T11:33:06",
+        "status": "cancelled"
+    },
+    {
+        "id": "reg_b691a491ba",
+        "event_id": "ed31f4bb-0497-4018-9cf4-1e096d05f40a",
+        "event_title": "กิจกรรมอบรมด้านการปฐมพยาบาลเบื้องต้นและการช่วยฟื้นคืนชีพขั้นพื้นฐาน (CPR)",
+        "event_date": "1 พ.ค.69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-21T11:47:57",
+        "status": "cancelled"
+    },
+    {
+        "id": "reg_d11b187ad2",
+        "event_id": "9df64820-0551-46ae-a51a-8f0d0b2e3d58",
+        "event_title": "ปฐมนิเทศนักศึกษาใหม่ ภาคปกติ ปีการศึกษา 2569",
+        "event_date": "19-20 พ.ค. 69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-21T19:33:14",
+        "status": "cancelled"
+    },
+    {
+        "id": "reg_f307a2bf3d",
+        "event_id": "ed31f4bb-0497-4018-9cf4-1e096d05f40a",
+        "event_title": "กิจกรรมอบรมด้านการปฐมพยาบาลเบื้องต้นและการช่วยฟื้นคืนชีพขั้นพื้นฐาน (CPR)",
+        "event_date": "1 พ.ค.69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-21T20:02:27",
+        "status": "cancelled"
+    },
+    {
+        "id": "reg_89c847fed4",
+        "event_id": "ffcefd63-ac95-4fde-ba2a-a87e625aaef5",
+        "event_title": "รายงานตัวนักศึกษาใหม่",
+        "event_date": "11-18 พ.ค. 69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-21T20:46:09",
+        "status": "confirmed"
+    },
+    {
+        "id": "reg_771d259ad7",
+        "event_id": "d8da856a-c5f5-4db4-a643-9e3bc5006715",
+        "event_title": "ตรวจสุขภาพนักศึกษาใหม่ ภาคปกติ ปีการศึกษา 2569",
+        "event_date": "22-23 พ.ค. 69",
+        "username": "67102122111",
+        "name": "กฤษฎา ศรีคิลิน",
+        "major": "สาขาวิชาเทคโนโลยีสารสนเทศ",
+        "email": "kritsada.sr67@snru.ac.th",
+        "timestamp": "2026-05-22T12:08:16",
         "status": "confirmed"
     }
 ]
