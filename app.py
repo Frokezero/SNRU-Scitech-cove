@@ -8,6 +8,7 @@ import json
 from database import get_db_connection
 import uuid
 import re
+import urllib.request
 import smtplib
 import threading
 import time
@@ -115,6 +116,40 @@ def send_email_async(to_email, subject, body):
     thread = threading.Thread(target=send_email_task)
     thread.start()
 
+def send_line_notification(to_id, message):
+    def send_line_task():
+        try:
+            token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+            if not token or not to_id:
+                return
+            
+            url = "https://api.line.me/v2/bot/message/push"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}"
+            }
+            body = {
+                "to": to_id,
+                "messages": [
+                    {
+                        "type": "text",
+                        "text": message
+                    }
+                ]
+            }
+            
+            req_data = json.dumps(body).encode('utf-8')
+            req = urllib.request.Request(url, data=req_data, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                response.read()
+        except Exception as e:
+            print(f"Failed to send LINE notification to {to_id}: {e}")
+            
+    if not to_id:
+        return
+    thread = threading.Thread(target=send_line_task)
+    thread.start()
+
 def get_premium_email_html(title, content_html, type_color='#0ea5e9', action_url=None, action_text=None):
     action_button_html = ""
     if action_url and action_text:
@@ -207,15 +242,16 @@ def db_save_user(username, data):
     with data_lock:
         conn = get_db_connection()
         conn.execute('''
-            INSERT INTO users (username, password, name, email, major, role)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (username, password, name, email, major, role, line_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(username) DO UPDATE SET
                 password=excluded.password,
                 name=excluded.name,
                 email=excluded.email,
                 major=excluded.major,
-                role=excluded.role
-        ''', (username, data.get('password',''), data.get('name',''), data.get('email',''), data.get('major',''), data.get('role','student')))
+                role=excluded.role,
+                line_id=excluded.line_id
+        ''', (username, data.get('password',''), data.get('name',''), data.get('email',''), data.get('major',''), data.get('role','student'), data.get('line_id','')))
         conn.commit()
         conn.close()
 
@@ -871,6 +907,7 @@ def me():
                     "role": u['role'],
                     "major": u.get('major', u.get('name')),
                     "email": u.get('email', ''),
+                    "line_id": u.get('line_id', ''),
                     "year": get_student_year(username) if u.get('role') == 'student' else None
                 }
             })
@@ -884,6 +921,7 @@ def update_profile():
     
     data = request.json
     new_email = data.get('email')
+    new_line_id = data.get('line_id')
     
     with data_lock:
         u = db_get_user(username)
@@ -897,9 +935,10 @@ def update_profile():
                 return jsonify({"success": False, "message": "รูปแบบอีเมลไม่ถูกต้อง"}), 400
         
         u['email'] = new_email or ""
+        u['line_id'] = new_line_id.strip() if new_line_id else ""
         db_save_user(username, u)
         
-    return jsonify({"success": True, "message": "อัปเดตอีเมลติดต่อเรียบร้อยแล้ว"})
+    return jsonify({"success": True, "message": "อัปเดตข้อมูลติดต่อเรียบร้อยแล้ว"})
 
 # Password Management API
 TOKENS_FILE = 'reset_tokens.json'
@@ -1317,6 +1356,13 @@ def add_event():
         new_event['created_at'] = datetime.now().isoformat()
         events.append(new_event)
         db_add_event(new_event)
+        
+        # Trigger LINE notification for new event
+        admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
+        if admin_line_id:
+            msg = f"🆕 กิจกรรมใหม่เปิดแล้ว! ขอเชิญร่วมกิจกรรม '{new_event.get('title')}' จัดขึ้นในวันที่ {new_event.get('date')} มาร่วมลงทะเบียนจองสิทธิ์กันได้เลยค่ะ/ครับ! ✨"
+            send_line_notification(admin_line_id, msg)
+            
     return jsonify({'success': True, 'event': new_event})
 
 @app.route('/api/events/<event_id>', methods=['PUT'])
@@ -1537,6 +1583,20 @@ def register_event(event_id):
             action_text="ตรวจสอบประวัติการจอง"
         )
         send_email_async(user_info['email'], subject, body)
+
+    # Trigger LINE notification
+    # 1. Send to Student (if they have configured line_id)
+    student_line_id = user_info.get('line_id')
+    if student_line_id:
+        status_thai = "สำเร็จแล้ว 🎉" if status == "confirmed" else "เรียบร้อยแล้ว (แต่อยู่ในคิวรายชื่อสำรอง)"
+        std_msg = f"สวัสดีคุณ {user_info.get('name', username)}! คุณได้ทำรายการจองสิทธิ์เข้าร่วมกิจกรรม '{event.get('title', '')}' {status_thai}\n📅 วันที่จัด: {event.get('date', '')}\n📍 สถานที่: {event.get('location', 'ยังไม่ระบุ')}"
+        send_line_notification(student_line_id, std_msg)
+        
+    # 2. Send to Admin / Group
+    admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
+    if admin_line_id:
+        adm_msg = f"📢 แจ้งเตือนแอดมิน: นักศึกษา {user_info.get('name', username)} ({username}) ได้จองเข้าร่วมกิจกรรม '{event.get('title', '')}' เรียบร้อยแล้ว (สถานะ: {status})"
+        send_line_notification(admin_line_id, adm_msg)
 
     return jsonify({"success": True, "message": "จองสำเร็จ!" if status == "confirmed" else "ลงชื่อสำรองสำเร็จ!", "status": status, "registration": reg})
 
@@ -1982,6 +2042,15 @@ def update_participation_status():
                     add_notification(target_username, "กิจกรรมผ่านแล้ว!", f"การเข้าร่วมกิจกรรม {event_title} ของคุณได้รับการอนุมัติ และคุณได้รับ {event_score} คะแนน", "success")
                 elif new_status == 'rejected':
                     add_notification(target_username, "กิจกรรมไม่ผ่าน", f"การเข้าร่วมกิจกรรม {event_title} ของคุณไม่ได้รับการอนุมัติ กรุณาติดต่อแอดมินสาขา", "danger")
+                    
+                # Trigger LINE Notification to Student
+                student_line_id = users[target_username].get('line_id')
+                if student_line_id:
+                    if new_status == 'approved':
+                        msg = f"🎉 ยินด้วยครับ! ผลงานกิจกรรม '{event_title}' ของคุณได้รับการตรวจสอบและอนุมัติเรียบร้อยแล้ว\n⭐ ได้รับคะแนน: +{event_score} คะแนนสะสม!"
+                    elif new_status == 'rejected':
+                        msg = f"⚠️ ผลงานหลักฐานกิจกรรม '{event_title}' ของคุณไม่ผ่านการอนุมัติ (Rejected)\nกรุณาเข้าสู่ระบบเพื่อดูรายละเอียดและอัปโหลดภาพหลักฐานใหม่อีกครั้งครับ"
+                    send_line_notification(student_line_id, msg)
                     
             conn.commit()
             _cache["participations"]["data"] = None

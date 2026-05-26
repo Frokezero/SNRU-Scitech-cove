@@ -886,12 +886,17 @@
                 <div class="icon-circle" style="background:#f0fdf4; color:#16a34a;">
                     <i class="fa-solid fa-envelope"></i>
                 </div>
-                ข้อมูลติดต่อ (อีเมลสำหรับติดต่อกลับ)
+                ข้อมูลติดต่อ (อีเมลและระบบแจ้งเตือนทาง LINE)
             </div>
             <div class="card-body" style="padding: 22px;">
                 <div class="form-group" style="margin-bottom: 16px;">
                     <label style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:6px; display:block;">อีเมลนักศึกษา</label>
                     <input type="email" id="profile-email" placeholder="example@snru.ac.th" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-family:inherit;">
+                </div>
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:6px; display:block;">LINE User ID (สำหรับรับการแจ้งเตือนสิทธิ์และผลกิจกรรมทาง LINE)</label>
+                    <input type="text" id="profile-line-id" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-family:inherit;">
+                    <span style="font-size:11px; color:#94a3b8; margin-top:6px; display:block; line-height: 1.4;">💡 วิธีรับ ID ของคุณ: เพิ่มเพื่อนแชทบอท LINE ของระบบ แล้วพิมพ์คำสั่ง <b>/myid</b> จากนั้นนำค่ารหัสมาบันทึกไว้ในช่องนี้เพื่อรับการแจ้งเตือนแบบเรียลไทม์ได้ทันทีครับ</span>
                 </div>
                 <button class="btn-submit-work" style="margin-top:0; background:#16a34a;" onclick="updateProfileEmail()">
                     <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลติดต่อ
@@ -1231,6 +1236,9 @@
                 if (document.getElementById('profile-email')) {
                     document.getElementById('profile-email').value = currentUser.email || '';
                 }
+                if (document.getElementById('profile-line-id')) {
+                    document.getElementById('profile-line-id').value = currentUser.line_id || '';
+                }
 
                 const resEvt = await fetch('/api/events');
                 const rawEvtData = await resEvt.json();
@@ -1453,6 +1461,7 @@
 
         async function updateProfileEmail() {
             const email = document.getElementById('profile-email').value.trim();
+            const lineId = document.getElementById('profile-line-id') ? document.getElementById('profile-line-id').value.trim() : '';
             
             if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
                 toast('รูปแบบอีเมลไม่ถูกต้อง', 'warning');
@@ -1468,12 +1477,15 @@
                 const res = await fetch('/api/user/update-profile', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email })
+                    body: JSON.stringify({ email: email, line_id: lineId })
                 });
                 const data = await res.json();
                 if (res.ok) {
                     toast('บันทึกข้อมูลติดต่อเรียบร้อยแล้ว', 'success');
-                    if (currentUser) currentUser.email = email;
+                    if (currentUser) {
+                        currentUser.email = email;
+                        currentUser.line_id = lineId;
+                    }
                 } else {
                     toast(data.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
                 }
