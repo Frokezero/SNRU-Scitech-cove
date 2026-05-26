@@ -127,6 +127,17 @@
         </div>
     </header>
 
+    <!-- ===== SEARCH BAR ===== -->
+    <div class="search-bar" id="search-bar">
+        <div class="search-bar-inner">
+            <div class="search-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="search-input" class="search-input" placeholder="ค้นหาชื่อกิจกรรม..." oninput="onSearchInput(this)">
+                <button id="search-clear" class="search-clear" onclick="clearSearch()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== FILTER BAR ===== -->
     <div class="filter-bar" id="filter-bar">
         <div class="filter-bar-inner">
@@ -157,6 +168,11 @@
             <span id="results-count" class="results-count">
                 <i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลด...
             </span>
+            <div class="view-toggles">
+                <button id="view-grid" class="view-btn active" onclick="setView('grid')" title="แสดงแบบตารางการ์ด"><i class="fa-solid fa-grip"></i></button>
+                <button id="view-list" class="view-btn" onclick="setView('list')" title="แสดงแบบรายการ"><i class="fa-solid fa-list"></i></button>
+                <button id="view-calendar" class="view-btn" onclick="setView('calendar')" title="แสดงแบบปฏิทิน"><i class="fa-solid fa-calendar-days"></i></button>
+            </div>
         </div>
     </div>
 

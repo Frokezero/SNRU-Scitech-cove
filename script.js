@@ -567,6 +567,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const dayEvents = parsedEventsList.filter(e => {
                 if (e.start.day === null) return false;
                 if (e.start.year !== targetY || e.start.month !== targetM) return false;
+                
+                // Apply search filter if present
+                if (currentSearchText) {
+                    const q = currentSearchText.toLowerCase();
+                    if (!e.title.toLowerCase().includes(q)) return false;
+                }
+                
+                // Apply branch filter if present
+                if (currentBranchFilter !== 'all') {
+                    if (currentBranchFilter === 'university') {
+                        if (e.category !== 'กิจกรรมมหาวิทยาลัย') return false;
+                    } else {
+                        if (e.owner !== currentBranchFilter) return false;
+                    }
+                }
+                
                 if (!e.end) return e.start.day === d;
                 return d >= e.start.day && d <= e.end.day;
             });
@@ -706,6 +722,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCards();
     };
 
+    window._renderCards = () => {
+        renderCards();
+    };
+
     // ===== REGISTRATION =====
     window.openRegisterConfirm = async (id, title) => {
         if (!currentUser) {
@@ -815,10 +835,19 @@ function setupDragScroll() {
 // ===== VIEW TOGGLE =====
 window.setView = (view) => {
     currentView = view;
-    document.getElementById('view-grid').classList.toggle('active', view === 'grid');
-    document.getElementById('view-list').classList.toggle('active', view === 'list');
+    const gridBtn = document.getElementById('view-grid');
+    const listBtn = document.getElementById('view-list');
+    const calBtn = document.getElementById('view-calendar');
+    if (gridBtn) gridBtn.classList.toggle('active', view === 'grid');
+    if (listBtn) listBtn.classList.toggle('active', view === 'list');
+    if (calBtn) calBtn.classList.toggle('active', view === 'calendar');
+    
     const container = document.getElementById('cards-container');
     if (container) container.className = 'cards-container' + (view === 'list' ? ' list-view' : '');
+    
+    if (typeof window._renderCards === 'function') {
+        window._renderCards();
+    }
 }
 
 // ===== SEARCH =====

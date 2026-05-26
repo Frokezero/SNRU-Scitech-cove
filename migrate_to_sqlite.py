@@ -2,6 +2,7 @@ import os
 import json
 import sqlite3
 from database import init_db, get_db_connection
+from werkzeug.security import generate_password_hash
 
 def migrate_users():
     conn = get_db_connection()
@@ -12,6 +13,42 @@ def migrate_users():
     with open('users.json', 'r', encoding='utf-8') as f:
         users = json.load(f)
         
+    # Scan participations.json for missing users
+    if os.path.exists('participations.json'):
+        with open('participations.json', 'r', encoding='utf-8') as f:
+            try:
+                parts = json.load(f)
+                for p in parts:
+                    u = p.get('username')
+                    if u and u not in users:
+                        users[u] = {
+                            "password": generate_password_hash('password'),
+                            "name": p.get('student_name') or f"นักศึกษา {u}",
+                            "major": p.get('major') or "คณะวิทยาศาสตร์และเทคโนโลยี",
+                            "email": p.get('email') or f"{u}@snru.ac.th",
+                            "role": "student"
+                        }
+            except Exception as e:
+                print(f"Error scanning participations.json for users: {e}")
+
+    # Scan registrations.json for missing users
+    if os.path.exists('registrations.json'):
+        with open('registrations.json', 'r', encoding='utf-8') as f:
+            try:
+                regs = json.load(f)
+                for r in regs:
+                    u = r.get('username')
+                    if u and u not in users:
+                        users[u] = {
+                            "password": generate_password_hash('password'),
+                            "name": r.get('name') or f"นักศึกษา {u}",
+                            "major": r.get('major') or "คณะวิทยาศาสตร์และเทคโนโลยี",
+                            "email": r.get('email') or f"{u}@snru.ac.th",
+                            "role": "student"
+                        }
+            except Exception as e:
+                print(f"Error scanning registrations.json for users: {e}")
+
     for username, data in users.items():
         c.execute('''
             INSERT OR REPLACE INTO users (username, password, name, email, major, role)

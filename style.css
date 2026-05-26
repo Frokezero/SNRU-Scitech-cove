@@ -1321,3 +1321,22 @@ html.dark-theme .popover-item:hover {
 .popover-item-meta i {
     font-size: 9px;
 }
+
+/* Dark Theme Search Box overrides */
+html.dark-theme .search-bar {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+html.dark-theme .search-input {
+    background: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+}
+html.dark-theme .search-input:focus {
+    border-color: #0284c7;
+    background: #0f172a;
+}
+html.dark-theme .search-clear:hover {
+    color: #f8fafc;
+}
+

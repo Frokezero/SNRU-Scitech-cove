@@ -225,7 +225,6 @@ def db_delete_user(username):
         # Delete dependent references first to satisfy foreign key constraints
         conn.execute('DELETE FROM participations WHERE username=?', (username,))
         conn.execute('DELETE FROM registrations WHERE username=?', (username,))
-        conn.execute('DELETE FROM notifications WHERE username=?', (username,))
         conn.execute('DELETE FROM users WHERE username=?', (username,))
         conn.commit()
         conn.close()

@@ -22,7 +22,6 @@ def init_test_db():
     for username in test_usernames:
         c.execute('DELETE FROM participations WHERE username=?', (username,))
         c.execute('DELETE FROM registrations WHERE username=?', (username,))
-        c.execute('DELETE FROM notifications WHERE username=?', (username,))
         c.execute('DELETE FROM users WHERE username=?', (username,))
         
     c.execute("DELETE FROM events WHERE id='test-concurrency-event'")
@@ -72,7 +71,6 @@ def clean_test_db():
     for username in test_usernames:
         c.execute('DELETE FROM participations WHERE username=?', (username,))
         c.execute('DELETE FROM registrations WHERE username=?', (username,))
-        c.execute('DELETE FROM notifications WHERE username=?', (username,))
         c.execute('DELETE FROM users WHERE username=?', (username,))
         
     c.execute("DELETE FROM events WHERE id='test-concurrency-event'")
