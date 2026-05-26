@@ -717,6 +717,15 @@
             color: white;
             box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);
         }
+        
+        .qr-container {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+        html.dark-theme .qr-container {
+            background: rgba(15, 23, 42, 0.3) !important;
+            border-color: #334155 !important;
+        }
 
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
@@ -895,8 +904,16 @@
                 </div>
                 <div class="form-group" style="margin-bottom: 16px;">
                     <label style="font-size:12px; color:#64748b; font-weight:600; margin-bottom:6px; display:block;">LINE User ID (สำหรับรับการแจ้งเตือนสิทธิ์และผลกิจกรรมทาง LINE)</label>
-                    <input type="text" id="profile-line-id" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-family:inherit;">
-                    <span style="font-size:11px; color:#94a3b8; margin-top:6px; display:block; line-height: 1.4;">💡 วิธีรับ ID ของคุณ: เพิ่มเพื่อนแชทบอท LINE ของระบบ แล้วพิมพ์คำสั่ง <b>/myid</b> จากนั้นนำค่ารหัสมาบันทึกไว้ในช่องนี้เพื่อรับการแจ้งเตือนแบบเรียลไทม์ได้ทันทีครับ</span>
+                    <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <input type="text" id="profile-line-id" placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-family:inherit; margin-bottom: 8px;">
+                            <span style="font-size:11px; color:#94a3b8; display:block; line-height: 1.4;">💡 <b>วิธีรับ ID ของคุณ:</b> สแกน QR Code เพื่อแอดไลน์บอทของระบบ หรือแอดไอดี <b>@614eqrhw</b> จากนั้นส่งข้อความคำสั่ง <b>/myid</b> เข้าไปในแชทบอท แล้วนำค่ารหัสที่ได้มาบันทึกในช่องนี้เพื่อรับการแจ้งเตือนส่วนตัวแบบเรียลไทม์ครับ</span>
+                        </div>
+                        <div class="qr-container" style="display: flex; flex-direction: column; align-items: center; padding: 12px; border-radius: 12px; border-width: 1px; border-style: solid; width: 140px; text-align: center; flex-shrink: 0;">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=https://line.me/R/ti/p/%40614eqrhw" alt="LINE Bot QR Code" style="width: 110px; height: 110px; border-radius: 6px; border: 1px solid #e2e8f0; background: white;">
+                            <span style="font-size: 10px; font-weight: 600; color: #64748b; margin-top: 8px; display: block;"><i class="fa-brands fa-line" style="color: #06c755; margin-right: 2px;"></i> สแกนแอดไลน์บอท</span>
+                        </div>
+                    </div>
                 </div>
                 <button class="btn-submit-work" style="margin-top:0; background:#16a34a;" onclick="updateProfileEmail()">
                     <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลติดต่อ
