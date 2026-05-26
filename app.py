@@ -8,6 +8,7 @@ import json
 from database import get_db_connection
 import uuid
 import re
+import urllib.request
 import smtplib
 import threading
 import time
@@ -115,6 +116,40 @@ def send_email_async(to_email, subject, body):
     thread = threading.Thread(target=send_email_task)
     thread.start()
 
+def send_line_notification(to_id, message):
+    def send_line_task():
+        try:
+            token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+            if not token or not to_id:
+                return
+            
+            url = "https://api.line.me/v2/bot/message/push"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}"
+            }
+            body = {
+                "to": to_id,
+                "messages": [
+                    {
+                        "type": "text",
+                        "text": message
+                    }
+                ]
+            }
+            
+            req_data = json.dumps(body).encode('utf-8')
+            req = urllib.request.Request(url, data=req_data, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                response.read()
+        except Exception as e:
+            print(f"Failed to send LINE notification to {to_id}: {e}")
+            
+    if not to_id:
+        return
+    thread = threading.Thread(target=send_line_task)
+    thread.start()
+
 def get_premium_email_html(title, content_html, type_color='#0ea5e9', action_url=None, action_text=None):
     action_button_html = ""
     if action_url and action_text:
@@ -207,15 +242,16 @@ def db_save_user(username, data):
     with data_lock:
         conn = get_db_connection()
         conn.execute('''
-            INSERT INTO users (username, password, name, email, major, role)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO users (username, password, name, email, major, role, line_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(username) DO UPDATE SET
                 password=excluded.password,
                 name=excluded.name,
                 email=excluded.email,
                 major=excluded.major,
-                role=excluded.role
-        ''', (username, data.get('password',''), data.get('name',''), data.get('email',''), data.get('major',''), data.get('role','student')))
+                role=excluded.role,
+                line_id=excluded.line_id
+        ''', (username, data.get('password',''), data.get('name',''), data.get('email',''), data.get('major',''), data.get('role','student'), data.get('line_id','')))
         conn.commit()
         conn.close()
 
@@ -773,7 +809,7 @@ def update_activity():
     public_paths = [
         '/', '/login', '/api/login', '/api/register', '/register', 
         '/api/carousel', '/api/events', '/api/leaderboard', '/theme-loader.js',
-        '/style.css', '/script.js', '/favicon.ico'
+        '/style.css', '/script.js', '/favicon.ico', '/api/line/webhook'
     ]
     
     if request.path in public_paths or request.path.startswith('/static') or request.path.startswith('/uploads'):
@@ -871,6 +907,7 @@ def me():
                     "role": u['role'],
                     "major": u.get('major', u.get('name')),
                     "email": u.get('email', ''),
+                    "line_id": u.get('line_id', ''),
                     "year": get_student_year(username) if u.get('role') == 'student' else None
                 }
             })
@@ -884,6 +921,7 @@ def update_profile():
     
     data = request.json
     new_email = data.get('email')
+    new_line_id = data.get('line_id')
     
     with data_lock:
         u = db_get_user(username)
@@ -897,9 +935,10 @@ def update_profile():
                 return jsonify({"success": False, "message": "รูปแบบอีเมลไม่ถูกต้อง"}), 400
         
         u['email'] = new_email or ""
+        u['line_id'] = new_line_id.strip() if new_line_id else ""
         db_save_user(username, u)
         
-    return jsonify({"success": True, "message": "อัปเดตอีเมลติดต่อเรียบร้อยแล้ว"})
+    return jsonify({"success": True, "message": "อัปเดตข้อมูลติดต่อเรียบร้อยแล้ว"})
 
 # Password Management API
 TOKENS_FILE = 'reset_tokens.json'
@@ -1317,6 +1356,13 @@ def add_event():
         new_event['created_at'] = datetime.now().isoformat()
         events.append(new_event)
         db_add_event(new_event)
+        
+        # Trigger LINE notification for new event
+        admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
+        if admin_line_id:
+            msg = f"🆕 กิจกรรมใหม่เปิดแล้ว! ขอเชิญร่วมกิจกรรม '{new_event.get('title')}' จัดขึ้นในวันที่ {new_event.get('date')} มาร่วมลงทะเบียนจองสิทธิ์กันได้เลยค่ะ/ครับ! ✨"
+            send_line_notification(admin_line_id, msg)
+            
     return jsonify({'success': True, 'event': new_event})
 
 @app.route('/api/events/<event_id>', methods=['PUT'])
@@ -1537,6 +1583,20 @@ def register_event(event_id):
             action_text="ตรวจสอบประวัติการจอง"
         )
         send_email_async(user_info['email'], subject, body)
+
+    # Trigger LINE notification
+    # 1. Send to Student (if they have configured line_id)
+    student_line_id = user_info.get('line_id')
+    if student_line_id:
+        status_thai = "สำเร็จแล้ว 🎉" if status == "confirmed" else "เรียบร้อยแล้ว (แต่อยู่ในคิวรายชื่อสำรอง)"
+        std_msg = f"สวัสดีคุณ {user_info.get('name', username)}! คุณได้ทำรายการจองสิทธิ์เข้าร่วมกิจกรรม '{event.get('title', '')}' {status_thai}\n📅 วันที่จัด: {event.get('date', '')}\n📍 สถานที่: {event.get('location', 'ยังไม่ระบุ')}"
+        send_line_notification(student_line_id, std_msg)
+        
+    # 2. Send to Admin / Group
+    admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
+    if admin_line_id:
+        adm_msg = f"📢 แจ้งเตือนแอดมิน: นักศึกษา {user_info.get('name', username)} ({username}) ได้จองเข้าร่วมกิจกรรม '{event.get('title', '')}' เรียบร้อยแล้ว (สถานะ: {status})"
+        send_line_notification(admin_line_id, adm_msg)
 
     return jsonify({"success": True, "message": "จองสำเร็จ!" if status == "confirmed" else "ลงชื่อสำรองสำเร็จ!", "status": status, "registration": reg})
 
@@ -1982,6 +2042,15 @@ def update_participation_status():
                     add_notification(target_username, "กิจกรรมผ่านแล้ว!", f"การเข้าร่วมกิจกรรม {event_title} ของคุณได้รับการอนุมัติ และคุณได้รับ {event_score} คะแนน", "success")
                 elif new_status == 'rejected':
                     add_notification(target_username, "กิจกรรมไม่ผ่าน", f"การเข้าร่วมกิจกรรม {event_title} ของคุณไม่ได้รับการอนุมัติ กรุณาติดต่อแอดมินสาขา", "danger")
+                    
+                # Trigger LINE Notification to Student
+                student_line_id = users[target_username].get('line_id')
+                if student_line_id:
+                    if new_status == 'approved':
+                        msg = f"🎉 ยินด้วยครับ! ผลงานกิจกรรม '{event_title}' ของคุณได้รับการตรวจสอบและอนุมัติเรียบร้อยแล้ว\n⭐ ได้รับคะแนน: +{event_score} คะแนนสะสม!"
+                    elif new_status == 'rejected':
+                        msg = f"⚠️ ผลงานหลักฐานกิจกรรม '{event_title}' ของคุณไม่ผ่านการอนุมัติ (Rejected)\nกรุณาเข้าสู่ระบบเพื่อดูรายละเอียดและอัปโหลดภาพหลักฐานใหม่อีกครั้งครับ"
+                    send_line_notification(student_line_id, msg)
                     
             conn.commit()
             _cache["participations"]["data"] = None
@@ -2484,6 +2553,14 @@ def serve_manual():
 # =============================================================
 # SECURE QR CODE & GPS CHECK-IN SYSTEM
 # =============================================================
+def safe_int(val, default=0):
+    if val is None or val == "":
+        return default
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return default
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     R = 6371.0  # Earth radius in km
     phi1 = math.radians(lat1)
@@ -2650,6 +2727,1905 @@ def process_student_checkin():
             "date": event.get('date')
         }
     })
+
+# =============================================================
+
+def make_unbound_flex(user_id, action_url):
+    return {
+        "type": "flex",
+        "altText": "⚠️ ยังไม่ได้ผูกบัญชี - SciTech Activity Bot",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "⚠️ ยังไม่ได้ผูกบัญชี",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "md",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": "SciTech SNRU Activity Calendar",
+                        "color": "#fef3c7",
+                        "size": "xs",
+                        "align": "center",
+                        "margin": "xs"
+                    }
+                ],
+                "background": {
+                    "type": "linearGradient",
+                    "angle": "135deg",
+                    "startColor": "#f59e0b",
+                    "endColor": "#d97706"
+                },
+                "paddingAll": "md"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "กรุณาผูกรหัส LINE User ID ก่อนจองกิจกรรมหรือตรวจสอบคะแนนนะครับ",
+                        "size": "sm",
+                        "color": "#1e293b",
+                        "wrap": True
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": "#f8fafc",
+                        "cornerRadius": "md",
+                        "paddingAll": "md",
+                        "margin": "md",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "รหัส LINE ID ของคุณ:",
+                                "size": "xxs",
+                                "color": "#64748b",
+                                "weight": "bold"
+                            },
+                            {
+                                "type": "text",
+                                "text": user_id,
+                                "size": "xs",
+                                "color": "#0ea5e9",
+                                "weight": "bold",
+                                "margin": "xs",
+                                "wrap": True
+                            }
+                        ]
+                    },
+                    {
+                        "type": "text",
+                        "text": "💡 ขั้นตอนการเชื่อมต่อ:\n1. คัดลอกรหัสสีฟ้าด้านบน\n2. เปิดหน้าหลักระบบปฏิทินกิจกรรมบนเว็บไซต์\n3. เข้าสู่ระบบ -> เมนู 'โปรไฟล์'\n4. วางรหัสในช่อง LINE User ID แล้วกดบันทึก",
+                        "size": "xxs",
+                        "color": "#475569",
+                        "wrap": True,
+                        "margin": "md"
+                    }
+                ],
+                "paddingAll": "lg"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "uri",
+                            "label": "🌐 เปิดเว็บไซต์เพื่อผูกบัญชี",
+                            "uri": action_url
+                        },
+                        "style": "primary",
+                        "color": "#0ea5e9"
+                    }
+                ],
+                "paddingAll": "md"
+            }
+        }
+    }
+
+def make_event_flex_bubble(event):
+    short_id = event['id'][:8]
+    category = event.get('category') or 'กิจกรรมทั่วไป'
+    
+    if 'มหา' in category or 'มหาวิทยาลัย' in category:
+        badge_color = "#3b82f6"
+        badge_text = "มหาวิทยาลัย"
+    elif 'คณะ' in category or 'สาขา' in category or 'วิชา' in category:
+        badge_color = "#f97316"
+        badge_text = "คณะ/สาขาวิชา"
+    else:
+        badge_color = "#64748b"
+        badge_text = category
+
+    title = event.get('title') or 'กิจกรรมไม่มีชื่อ'
+    location = event.get('location') or 'ยังไม่ระบุ'
+    date_val = event.get('date') or 'ยังไม่ระบุ'
+    score = safe_int(event.get('score'), 0)
+    
+    max_parts = safe_int(event.get('max_participants'), 0)
+    reg_cnt = safe_int(event.get('registered_count'), 0)
+    
+    if max_parts > 0:
+        cap_text = f"{reg_cnt} / {max_parts} ที่นั่ง"
+        pct = min(100, int((reg_cnt / max_parts) * 100))
+        if pct >= 90:
+            bar_color = "#ef4444"
+        elif pct >= 70:
+            bar_color = "#f59e0b"
+        else:
+            bar_color = "#22c55e"
+    else:
+        cap_text = f"จองแล้ว {reg_cnt} คน (ไม่จำกัด)"
+        pct = 30
+        bar_color = "#22c55e"
+
+    return {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": badge_text,
+                                    "color": "#ffffff",
+                                    "size": "xxs",
+                                    "weight": "bold",
+                                    "align": "center"
+                                }
+                            ],
+                            "backgroundColor": badge_color,
+                            "cornerRadius": "xl",
+                            "paddingStart": "md",
+                            "paddingEnd": "md",
+                            "paddingTop": "xs",
+                            "paddingBottom": "xs"
+                        }
+                    ]
+                },
+                {
+                    "type": "text",
+                    "text": title,
+                    "weight": "bold",
+                    "size": "md",
+                    "color": "#1e293b",
+                    "margin": "md",
+                    "wrap": True
+                },
+                {
+                    "type": "separator",
+                    "margin": "md"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "margin": "md",
+                    "spacing": "xs",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "📍 สถานที่:",
+                                    "size": "xs",
+                                    "color": "#64748b",
+                                    "flex": 3
+                                },
+                                {
+                                    "type": "text",
+                                    "text": location,
+                                    "size": "xs",
+                                    "color": "#334155",
+                                    "flex": 7,
+                                    "wrap": True
+                                }
+                            ]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "🗓️ วันจัดงาน:",
+                                    "size": "xs",
+                                    "color": "#64748b",
+                                    "flex": 3
+                                },
+                                {
+                                    "type": "text",
+                                    "text": date_val,
+                                    "size": "xs",
+                                    "color": "#334155",
+                                    "flex": 7,
+                                    "wrap": True
+                                }
+                            ]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "⭐ คะแนน:",
+                                    "size": "xs",
+                                    "color": "#64748b",
+                                    "flex": 3
+                                },
+                                {
+                                    "type": "text",
+                                    "text": f"+{safe_int(event.get('score'), 0)} คะแนนกิจกรรม",
+                                    "size": "xs",
+                                    "color": "#0ea5e9",
+                                    "weight": "bold",
+                                    "flex": 7
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "separator",
+                    "margin": "md"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "margin": "md",
+                    "contents": [
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "👥 ความจุผู้เข้าร่วม:",
+                                    "size": "xxs",
+                                    "color": "#64748b"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": cap_text,
+                                    "size": "xxs",
+                                    "weight": "bold",
+                                    "color": "#1e293b",
+                                    "align": "end"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "backgroundColor": "#e2e8f0",
+                            "height": "6px",
+                            "cornerRadius": "md",
+                            "margin": "xs",
+                            "contents": [
+                                {
+                                    "type": "box",
+                                    "layout": "vertical",
+                                    "backgroundColor": bar_color,
+                                    "width": f"{pct}%",
+                                    "height": "6px",
+                                    "cornerRadius": "md",
+                                    "contents": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "paddingAll": "lg"
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "message",
+                        "label": "⚡ จองด่วนทันที",
+                        "text": short_id
+                    },
+                    "style": "primary",
+                    "color": "#10b981"
+                }
+            ],
+        }
+    }
+
+def make_profile_flex(user, total_score, action_url):
+    year = get_student_year(user['username'])
+    year_str = f"ชั้นปีที่ {year}" if year else "ไม่ระบุชั้นปี"
+    
+    email = user.get('email') or 'ยังไม่ได้ระบุ'
+    line_id = user.get('line_id') or 'ยังไม่ได้ระบุ'
+    
+    return {
+        "type": "flex",
+        "altText": f"👤 ข้อมูลส่วนตัวของ {user['name']}",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "ข้อมูลส่วนตัวนักศึกษา",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "md",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": "STUDENT PROFILE INFO",
+                        "color": "#bae6fd",
+                        "size": "xxs",
+                        "align": "center",
+                        "weight": "bold",
+                        "margin": "xs"
+                    }
+                ],
+                "background": {
+                    "type": "linearGradient",
+                    "angle": "135deg",
+                    "startColor": "#0f4c81",
+                    "endColor": "#1e293b"
+                },
+                "paddingAll": "md"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": user['name'],
+                                "weight": "bold",
+                                "size": "lg",
+                                "color": "#0f172a"
+                            },
+                            {
+                                "type": "text",
+                                "text": f"รหัสนักศึกษา: {user['username']}",
+                                "size": "sm",
+                                "color": "#475569",
+                                "margin": "xs"
+                            },
+                            {
+                                "type": "text",
+                                "text": f"สาขาวิชา: {user.get('major', 'ยังไม่ระบุ')}",
+                                "size": "sm",
+                                "color": "#475569",
+                                "margin": "xs",
+                                "wrap": True
+                            },
+                            {
+                                "type": "text",
+                                "text": f"ชั้นปี: {year_str}",
+                                "size": "sm",
+                                "color": "#475569",
+                                "margin": "xs"
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "lg",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "⭐ คะแนนสะสม:",
+                                        "size": "sm",
+                                        "color": "#64748b",
+                                        "flex": 4
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": f"{total_score} คะแนน",
+                                        "size": "sm",
+                                        "color": "#0284c7",
+                                        "weight": "bold",
+                                        "flex": 6
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "✉️ อีเมล:",
+                                        "size": "sm",
+                                        "color": "#64748b",
+                                        "flex": 4
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": email,
+                                        "size": "sm",
+                                        "color": "#1e293b",
+                                        "flex": 6,
+                                        "wrap": True
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "📱 LINE ID:",
+                                        "size": "sm",
+                                        "color": "#64748b",
+                                        "flex": 4
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": line_id,
+                                        "size": "xs",
+                                        "color": "#1e293b",
+                                        "flex": 6,
+                                        "wrap": True
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "md",
+                        "backgroundColor": "#f8fafc",
+                        "cornerRadius": "md",
+                        "paddingAll": "sm",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "💡 วิธีแก้ไขข้อมูลผ่านแชทบอท:",
+                                "size": "xxs",
+                                "color": "#64748b",
+                                "weight": "bold"
+                            },
+                            {
+                                "type": "text",
+                                "text": "พิมพ์ 'แก้ไขอีเมล [เมลของคุณ]' เพื่อเปลี่ยนอีเมล\nพิมพ์ 'แก้ไขไลน์ [LINE ID ของคุณ]' เพื่อเปลี่ยน LINE ID",
+                                "size": "xxs",
+                                "color": "#64748b",
+                                "wrap": True,
+                                "margin": "xs"
+                            }
+                        ]
+                    }
+                ],
+                "paddingAll": "lg"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "uri",
+                            "label": "🌐 แก้ไขข้อมูลบนเว็บไซต์",
+                            "uri": f"{action_url}/profile"
+                        },
+                        "style": "primary",
+                        "color": "#0ea5e9"
+                    }
+                ],
+                "paddingAll": "md"
+            }
+        }
+    }
+
+def make_scorecard_flex(user, total_score, total_count, action_url):
+    return {
+        "type": "flex",
+        "altText": f"⭐ ข้อมูลคะแนนกิจกรรมของ {user['name']}",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "บัตรคะแนนกิจกรรมนักศึกษา",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "sm",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": "STUDENT ACTIVITY CARD",
+                        "color": "#bae6fd",
+                        "size": "xxs",
+                        "align": "center",
+                        "weight": "bold",
+                        "margin": "xs"
+                    }
+                ],
+                "background": {
+                    "type": "linearGradient",
+                    "angle": "135deg",
+                    "startColor": "#0f172a",
+                    "endColor": "#1e293b"
+                },
+                "paddingAll": "md"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "flex": 7,
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": user['name'],
+                                        "weight": "bold",
+                                        "size": "lg",
+                                        "color": "#0f172a"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": f"รหัสนักศึกษา: {user['username']}",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "margin": "xs"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": f"สาขาวิชา: {user.get('major', 'ยังไม่ระบุ')}",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "margin": "xs",
+                                        "wrap": True
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "flex": 4,
+                                "contents": [
+                                    {
+                                        "type": "box",
+                                        "layout": "vertical",
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": str(total_score),
+                                                "weight": "bold",
+                                                "size": "xl",
+                                                "color": "#ffffff",
+                                                "align": "center"
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": "คะแนนสะสม",
+                                                "size": "xxs",
+                                                "color": "#e0f2fe",
+                                                "weight": "bold",
+                                                "align": "center"
+                                            }
+                                        ],
+                                        "backgroundColor": "#0ea5e9",
+                                        "cornerRadius": "xl",
+                                        "paddingAll": "md"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "margin": "lg",
+                        "spacing": "md",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "flex": 1,
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "กิจกรรมที่อนุมัติแล้ว",
+                                        "size": "xxs",
+                                        "color": "#64748b",
+                                        "align": "center"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": f"✅ {total_count} งาน",
+                                        "weight": "bold",
+                                        "size": "sm",
+                                        "color": "#10b981",
+                                        "align": "center",
+                                        "margin": "xs"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "flex": 1,
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "สถานะระบบ",
+                                        "size": "xxs",
+                                        "color": "#64748b",
+                                        "align": "center"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "เชื่อมต่อ LINE แล้ว",
+                                        "weight": "bold",
+                                        "size": "xxs",
+                                        "color": "#0ea5e9",
+                                        "align": "center",
+                                        "margin": "xs"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "paddingAll": "lg"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "uri",
+                            "label": "🌐 เข้าสู่เว็บไซต์หลักเพื่อดูรายละเอียด",
+                            "uri": action_url
+                        },
+                        "style": "secondary",
+                        "color": "#f1f5f9"
+                    }
+                ],
+                "paddingAll": "md"
+            }
+        }
+    }
+
+def make_history_flex(user, regs, action_url):
+    contents = []
+    
+    status_colors = {
+        "confirmed": "#22c55e",
+        "waitlist": "#f59e0b",
+        "cancelled": "#64748b"
+    }
+    
+    status_texts = {
+        "confirmed": "✅ จองสำเร็จ (ยืนยันสิทธิ์)",
+        "waitlist": "⏳ รายชื่อสำรอง (Waitlist)",
+        "cancelled": "❌ ยกเลิกการจอง"
+    }
+
+    for idx, r in enumerate(regs, 1):
+        status_raw = r.get('status', 'confirmed')
+        st_color = status_colors.get(status_raw, "#64748b")
+        st_text = status_texts.get(status_raw, status_raw)
+        
+        item_contents = [
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"{idx}. {r['event_title']}",
+                        "weight": "bold",
+                        "size": "sm",
+                        "color": "#1e293b",
+                        "flex": 8,
+                        "wrap": True
+                    },
+                    {
+                        "type": "text",
+                        "text": st_text,
+                        "size": "xxs",
+                        "color": st_color,
+                        "weight": "bold",
+                        "align": "end",
+                        "flex": 4
+                    }
+                ]
+            },
+            {
+                "type": "box",
+                "layout": "horizontal",
+                "margin": "xs",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"📅 จัดวันที่: {r.get('event_date')}",
+                        "size": "xxs",
+                        "color": "#64748b"
+                    }
+                ]
+            }
+        ]
+
+        if status_raw != 'cancelled':
+            item_contents.append({
+                "type": "button",
+                "action": {
+                    "type": "message",
+                    "label": "❌ ยกเลิกการจองนี้",
+                    "text": f"ยกเลิก {r['id']}"
+                },
+                "style": "link",
+                "color": "#ef4444",
+                "height": "sm",
+                "margin": "xs"
+            })
+
+        item_box = {
+            "type": "box",
+            "layout": "vertical",
+            "margin": "md" if idx > 1 else "none",
+            "contents": item_contents
+        }
+        contents.append(item_box)
+        if idx < len(regs):
+            contents.append({"type": "separator", "margin": "md"})
+
+    return {
+        "type": "flex",
+        "altText": f"📋 ประวัติการสมัครกิจกรรมของ {user['name']}",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "📋 ประวัติการสมัครกิจกรรม",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "md",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": "แสดงข้อมูลการจองล่าสุด 5 รายการ",
+                        "color": "#e0e7ff",
+                        "size": "xs",
+                        "align": "center",
+                        "margin": "xs"
+                    }
+                ],
+                "background": {
+                    "type": "linearGradient",
+                    "angle": "135deg",
+                    "startColor": "#6366f1",
+                    "endColor": "#4f46e5"
+                },
+                "paddingAll": "md"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": contents,
+                "paddingAll": "lg"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "uri",
+                            "label": "🔍 ตรวจเช็คประวัติทั้งหมดบนเว็บ",
+                            "uri": action_url
+                        },
+                        "style": "secondary",
+                        "color": "#f1f5f9"
+                    }
+                ],
+                "paddingAll": "md"
+            }
+        }
+    }
+
+def make_booking_success_flex(user, event, status, action_url):
+    status_color = "#10b981" if status == "confirmed" else "#f59e0b"
+    status_title = "🎉 จองกิจกรรมสำเร็จแล้ว!" if status == "confirmed" else "⏳ ได้รับคิวสำรองเรียบร้อย!"
+    status_desc = "ยืนยันที่นั่งแล้ว (Confirmed) ✅" if status == "confirmed" else "คิวสำรอง (Waitlist) ⏳"
+    
+    return {
+        "type": "flex",
+        "altText": f"🎉 {status_title} - {event.get('title')}",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": status_title,
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "md",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": "ระบบปฏิทินกิจกรรม SciTech SNRU",
+                        "color": "#d1fae5",
+                        "size": "xs",
+                        "align": "center",
+                        "margin": "xs"
+                    }
+                ],
+                "background": {
+                    "type": "linearGradient",
+                    "angle": "135deg",
+                    "startColor": status_color,
+                    "endColor": "#047857" if status == "confirmed" else "#d97706"
+                },
+                "paddingAll": "md"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"สวัสดีคุณ {user.get('name', user.get('username'))}",
+                        "weight": "bold",
+                        "size": "sm",
+                        "color": "#1e293b"
+                    },
+                    {
+                        "type": "text",
+                        "text": "ระบบทำรายการสมัครเข้าร่วมกิจกรรมของคุณเสร็จสิ้นเรียบร้อยแล้ว ดังรายละเอียด:",
+                        "size": "xs",
+                        "color": "#64748b",
+                        "margin": "xs",
+                        "wrap": True
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "md"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "md",
+                        "spacing": "xs",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "💻 กิจกรรม:",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 3
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": event.get('title', ''),
+                                        "size": "xs",
+                                        "color": "#1e293b",
+                                        "weight": "bold",
+                                        "flex": 7,
+                                        "wrap": True
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "🗓️ วันจัดงาน:",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 3
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": event.get('date', ''),
+                                        "size": "xs",
+                                        "color": "#1e293b",
+                                        "flex": 7
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "📍 สถานที่:",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 3
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": event.get('location', 'ยังไม่ระบุ'),
+                                        "size": "xs",
+                                        "color": "#1e293b",
+                                        "flex": 7,
+                                        "wrap": True
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "⭐ คะแนน:",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 3
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": f"+{safe_int(event.get('score'), 0)} คะแนนกิจกรรม",
+                                        "size": "xs",
+                                        "color": "#10b981",
+                                        "weight": "bold",
+                                        "flex": 7
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "📌 สถานะที่นั่ง:",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 3
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": status_desc,
+                                        "size": "xs",
+                                        "color": status_color,
+                                        "weight": "bold",
+                                        "flex": 7
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "md"
+                    },
+                    {
+                        "type": "text",
+                        "text": f"📧 ระบบจัดส่งอีเมลยืนยันการจองให้ท่านที่ {user.get('email', '')} เรียบร้อยแล้วครับ",
+                        "size": "xxs",
+                        "color": "#64748b",
+                        "margin": "md",
+                        "wrap": True
+                    }
+                ],
+                "paddingAll": "lg"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "uri",
+                            "label": "🌐 ตรวจสอบสถานะผ่านหน้าหลัก",
+                            "uri": action_url
+                        },
+                        "style": "secondary",
+                        "color": "#f1f5f9"
+                    }
+                ],
+                "paddingAll": "md"
+            }
+        }
+    }
+
+def make_cancel_confirm_flex(user, event_title, action_url):
+    return {
+        "type": "flex",
+        "altText": f"❌ ยกเลิกการจองสำเร็จ - {event_title}",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "❌ ยกเลิกการจองสำเร็จ",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "md",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": "ระบบปฏิทินกิจกรรม SciTech SNRU",
+                        "color": "#fee2e2",
+                        "size": "xs",
+                        "align": "center",
+                        "margin": "xs"
+                    }
+                ],
+                "background": {
+                    "type": "linearGradient",
+                    "angle": "135deg",
+                    "startColor": "#ef4444",
+                    "endColor": "#b91c1c"
+                },
+                "paddingAll": "md"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"สวัสดีคุณ {user.get('name', user.get('username'))}",
+                        "weight": "bold",
+                        "size": "sm",
+                        "color": "#1e293b"
+                    },
+                    {
+                        "type": "text",
+                        "text": "ระบบได้ทำการยกเลิกการจองกิจกรรมของท่านตามที่ร้องขอเรียบร้อยแล้ว ดังรายละเอียด:",
+                        "size": "xs",
+                        "color": "#64748b",
+                        "margin": "xs",
+                        "wrap": True
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "md"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "md",
+                        "spacing": "xs",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "💻 กิจกรรม:",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 3
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": event_title,
+                                        "size": "xs",
+                                        "color": "#ef4444",
+                                        "weight": "bold",
+                                        "flex": 7,
+                                        "wrap": True
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "📌 สถานะการจอง:",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 3
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "ยกเลิกการจองแล้ว (Cancelled)",
+                                        "size": "xs",
+                                        "color": "#ef4444",
+                                        "weight": "bold",
+                                        "flex": 7
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "md"
+                    },
+                    {
+                        "type": "text",
+                        "text": "หากท่านต้องการสมัครใหม่อีกครั้ง สามารถกดด่วนผ่านคำสั่ง 'กิจกรรม' หรือใช้รหัสสมัครในหน้าแรกได้ครับ",
+                        "size": "xxs",
+                        "color": "#64748b",
+                        "margin": "md",
+                        "wrap": True
+                    }
+                ],
+                "paddingAll": "lg"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "uri",
+                            "label": "🌐 ไปที่หน้าหลักของระบบ",
+                            "uri": action_url
+                        },
+                        "style": "secondary",
+                        "color": "#f1f5f9"
+                    }
+                ],
+                "paddingAll": "md"
+            }
+        }
+    }
+
+def get_flex_help():
+    return {
+        "type": "flex",
+        "altText": "🤖 เมนูช่วยเหลือและคำสั่งด่วน - SciTech Activity Bot",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "SciTech Activity Bot",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "xl",
+                        "align": "center"
+                    },
+                    {
+                        "type": "text",
+                        "text": "ระบบปฏิทินกิจกรรมนักศึกษา คณะวิทยาศาสตร์และเทคโนโลยี",
+                        "color": "#e0f2fe",
+                        "size": "xs",
+                        "align": "center",
+                        "margin": "sm"
+                    }
+                ],
+                "background": {
+                    "type": "linearGradient",
+                    "angle": "135deg",
+                    "startColor": "#0ea5e9",
+                    "endColor": "#0369a1"
+                },
+                "paddingAll": "xl"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "💡 แตะปุ่มด้านล่าง หรือพิมพ์คำสั่งด่วนเหล่านี้ได้ทันที:",
+                        "weight": "bold",
+                        "size": "sm",
+                        "color": "#1e293b",
+                        "wrap": True
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "md",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "📅 วันนี้ / กิจกรรม",
+                                        "weight": "bold",
+                                        "size": "sm",
+                                        "color": "#0284c7",
+                                        "flex": 4
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "ดูกิจกรรมที่กำลังเปิดจอง",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 6,
+                                        "wrap": True
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "⭐ คะแนน / แต้ม",
+                                        "weight": "bold",
+                                        "size": "sm",
+                                        "color": "#0ea5e9",
+                                        "flex": 4
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "เช็คคะแนนและข้อมูลโปรไฟล์",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 6,
+                                        "wrap": True
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "📋 ประวัติ",
+                                        "weight": "bold",
+                                        "size": "sm",
+                                        "color": "#6366f1",
+                                        "flex": 4
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "ดูประวัติกิจกรรม 5 ล่าสุด",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 6,
+                                        "wrap": True
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "🔑 ไอดี / รหัส",
+                                        "weight": "bold",
+                                        "size": "sm",
+                                        "color": "#64748b",
+                                        "flex": 4
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "ดู LINE ID เพื่อนำไปผูกบัญชี",
+                                        "size": "xs",
+                                        "color": "#64748b",
+                                        "flex": 6,
+                                        "wrap": True
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "lg"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "md",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": "⚡ วิธีจองด่วนผ่าน LINE:",
+                                "weight": "bold",
+                                "size": "xs",
+                                "color": "#e11d48"
+                            },
+                            {
+                                "type": "text",
+                                "text": "เพียงส่งรหัสกิจกรรม 8 ตัว (เช่น 9ae8b122) บอทจะลงทะเบียนให้คุณในเสี้ยววินาที!",
+                                "size": "xs",
+                                "color": "#475569",
+                                "wrap": True,
+                                "margin": "xs"
+                            }
+                        ]
+                    }
+                ],
+                "paddingAll": "lg"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "message",
+                            "label": "📅 ดูกิจกรรมเปิดจองวันนี้",
+                            "text": "วันนี้"
+                        },
+                        "style": "primary",
+                        "color": "#0ea5e9"
+                    },
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "message",
+                                    "label": "⭐ คะแนนสะสม",
+                                    "text": "คะแนน"
+                                },
+                                "style": "secondary",
+                                "color": "#e2e8f0"
+                            },
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "message",
+                                    "label": "📋 ประวัติการจอง",
+                                    "text": "ประวัติ"
+                                },
+                                "style": "secondary",
+                                "color": "#e2e8f0"
+                            }
+                        ]
+                    }
+                ],
+                "paddingAll": "md"
+            }
+        }
+    }
+
+def reply_line_message(reply_token, text, quick_reply=True):
+    try:
+        token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+        if not token or not reply_token:
+            return
+        url = "https://api.line.me/v2/bot/message/reply"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}"
+        }
+        
+        if isinstance(text, str):
+            messages = [{"type": "text", "text": text}]
+        elif isinstance(text, dict):
+            if text.get("type") == "flex":
+                messages = [text]
+            else:
+                messages = [{
+                    "type": "flex",
+                    "altText": "ระบบ SciTech Activity",
+                    "contents": text
+                }]
+        elif isinstance(text, list):
+            messages = []
+            for item in text:
+                if isinstance(item, str):
+                    messages.append({"type": "text", "text": item})
+                elif isinstance(item, dict):
+                    if item.get("type") == "flex":
+                        messages.append(item)
+                    else:
+                        messages.append({
+                            "type": "flex",
+                            "altText": "ระบบ SciTech Activity",
+                            "contents": item
+                        })
+        else:
+            return
+
+        if quick_reply and messages:
+            # Try to get website URL from Flask request context automatically
+            _website_uri = None
+            try:
+                from flask import has_request_context, request as _flask_req
+                if has_request_context():
+                    _website_uri = _flask_req.host_url.rstrip('/')
+            except Exception:
+                pass
+            
+            quick_items = [
+                {"type": "action", "action": {"type": "message", "label": "📅 กิจกรรม", "text": "กิจกรรม"}},
+                {"type": "action", "action": {"type": "message", "label": "⭐ คะแนน", "text": "คะแนน"}},
+                {"type": "action", "action": {"type": "message", "label": "📋 ประวัติ", "text": "ประวัติ"}},
+                {"type": "action", "action": {"type": "message", "label": "👤 โปรไฟล์", "text": "ข้อมูลส่วนตัว"}},
+                {"type": "action", "action": {"type": "message", "label": "❓ ช่วยเหลือ", "text": "ช่วยเหลือ"}}
+            ]
+            if _website_uri:
+                quick_items.append(
+                    {"type": "action", "action": {"type": "uri", "label": "🌐 เว็บไซต์", "uri": _website_uri}}
+                )
+            messages[-1]["quickReply"] = {"items": quick_items}
+
+        reply_body = {
+            "replyToken": reply_token,
+            "messages": messages
+        }
+        req_data = json.dumps(reply_body).encode('utf-8')
+        req = urllib.request.Request(url, data=req_data, headers=headers, method='POST')
+        with urllib.request.urlopen(req) as response:
+            response.read()
+    except Exception as e:
+        print(f"Failed to reply LINE message: {e}")
+
+@app.route('/api/line/webhook', methods=['POST'])
+def line_webhook():
+    # Bypass session requirement, fully public for LINE Platform requests
+    try:
+        data = request.json or {}
+        events = data.get('events', [])
+        action_url = request.host_url.rstrip('/')
+        
+        for event in events:
+            if event.get('type') == 'message' and event.get('message', {}).get('type') == 'text':
+                user_message = event.get('message', {}).get('text', '').strip()
+                reply_token = event.get('replyToken')
+                user_id = event.get('source', {}).get('userId')
+                
+                if not reply_token or not user_id:
+                    continue
+                
+                user_message_lower = user_message.lower()
+                
+                # Check for cancel booking first to prevent collision with hex matcher
+                if user_message_lower.startswith("ยกเลิก reg_") or user_message_lower.startswith("cancel reg_"):
+                    reg_id = user_message_lower.split()[-1]
+                    
+                    conn = get_db_connection()
+                    user_row = conn.execute("SELECT * FROM users WHERE line_id = ?", (user_id,)).fetchone()
+                    
+                    if not user_row:
+                        conn.close()
+                        reply_line_message(reply_token, make_unbound_flex(user_id, action_url))
+                        continue
+                        
+                    user = dict(user_row)
+                    username = user['username']
+                    
+                    with data_lock:
+                        reg_row = conn.execute("SELECT * FROM registrations WHERE id = ? AND username = ?", (reg_id, username)).fetchone()
+                        if not reg_row:
+                            conn.close()
+                            reply_line_message(reply_token, "❌ ไม่พบรายการจองนี้ หรือคุณไม่มีสิทธิ์ในการยกเลิกรายการดังกล่าว")
+                            continue
+                            
+                        reg = dict(reg_row)
+                        if reg['status'] == 'cancelled':
+                            conn.close()
+                            reply_line_message(reply_token, f"ℹ️ รายการจองกิจกรรม '{reg['event_title']}' นี้ได้ถูกยกเลิกไปก่อนหน้านี้แล้วครับ")
+                            continue
+                            
+                        conn.execute("UPDATE registrations SET status = 'cancelled' WHERE id = ?", (reg_id,))
+                        conn.commit()
+                        conn.close()
+                        _cache["registrations"]["data"] = None
+                        
+                    reply_line_message(reply_token, make_cancel_confirm_flex(user, reg['event_title'], action_url))
+                    
+                    admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
+                    if admin_line_id:
+                        adm_msg = f"🔔 แจ้งเตือนแอดมิน: นักศึกษา {user.get('name', username)} ({username}) ได้ทำการยกเลิกการจองกิจกรรม '{reg['event_title']}' ผ่าน LINE Bot"
+                        send_line_notification(admin_line_id, adm_msg)
+                    continue
+
+                # Check for 8-character hex code anywhere in the message (e.g. "จอง 9ae8b122", "9ae8b122", "/book 9ae8b122")
+                hex_match = re.search(r'([0-9a-f]{8})', user_message_lower)
+                
+                # 1. Booking command matching (starts with book/จอง/สมัคร OR is just a standalone 8-character hex string)
+                if hex_match and (any(k in user_message_lower for k in ['book', 'จอง', 'สมัคร']) or user_message_lower == hex_match.group(1)):
+                    short_id = hex_match.group(1)
+                    
+                    conn = get_db_connection()
+                    user_row = conn.execute("SELECT * FROM users WHERE line_id = ?", (user_id,)).fetchone()
+                    
+                    if not user_row:
+                        conn.close()
+                        reply_line_message(reply_token, make_unbound_flex(user_id, action_url))
+                        continue
+                        
+                    user = dict(user_row)
+                    username = user['username']
+                    
+                    with data_lock:
+                        # Find event that starts with short_id
+                        event_row = conn.execute("SELECT * FROM events WHERE id LIKE ? AND hidden = 0", (f"{short_id}%",)).fetchone()
+                        if not event_row:
+                            conn.close()
+                            reply_line_message(reply_token, f"❌ ไม่พบกิจกรรมที่มีรหัสด่วนขึ้นต้นด้วย '{short_id}' กรุณาตรวจสอบรหัสอีกครั้งครับ")
+                            continue
+                            
+                        event = dict(event_row)
+                        
+                        # Validate registration status
+                        current_time_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
+                        reg_start = event.get('registration_start') or ""
+                        reg_end = event.get('registration_end') or ""
+                        is_open = bool(event.get('registration_open'))
+                        
+                        if reg_start or reg_end:
+                            is_open = True
+                            if reg_start and current_time_str < reg_start:
+                                is_open = False
+                            if reg_end and current_time_str > reg_end:
+                                is_open = False
+                                
+                        if not is_open:
+                            conn.close()
+                            reply_line_message(reply_token, f"🔒 ขออภัยครับ กิจกรรม '{event['title']}' นี้ไม่ได้อยู่ระหว่างเปิดให้ลงทะเบียน/ปิดลงทะเบียนแล้ว")
+                            continue
+                            
+                        # Validate duplicate
+                        existing = conn.execute("SELECT * FROM registrations WHERE event_id = ? AND username = ? AND status != 'cancelled'", (event['id'], username)).fetchone()
+                        if existing:
+                            conn.close()
+                            reply_line_message(reply_token, f"👍 คุณได้ทำการจองกิจกรรม '{event['title']}' นี้ไปเรียบร้อยแล้วครับ")
+                            continue
+                            
+                        # Validate capacity
+                        max_p = safe_int(event.get('max_participants'), 0)
+                        status = "confirmed"
+                        if max_p > 0:
+                            active_confirmed = conn.execute("SELECT COUNT(*) as cnt FROM registrations WHERE event_id = ? AND status = 'confirmed'", (event['id'],)).fetchone()['cnt']
+                            if active_confirmed >= max_p:
+                                status = "waitlist"
+                                
+                        # Perform booking
+                        reg = {
+                            "id": "reg_" + uuid.uuid4().hex[:10],
+                            "event_id": event['id'],
+                            "event_title": event.get('title', ''),
+                            "event_date": event.get('date', ''),
+                            "username": username,
+                            "name": user.get('name', username),
+                            "major": user.get('major', ''),
+                            "email": user.get('email', ''),
+                            "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S'),
+                            "status": status
+                        }
+                        
+                        conn.execute('''
+                            INSERT INTO registrations (
+                                id, event_id, event_title, event_date, username, name,
+                                major, email, timestamp, status
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', (
+                            reg['id'], reg['event_id'], reg['event_title'], reg['event_date'],
+                            reg['username'], reg['name'], reg['major'], reg['email'],
+                            reg['timestamp'], reg['status']
+                        ))
+                        conn.commit()
+                        conn.close()
+                        _cache["registrations"]["data"] = None # Invalidate cache
+                        
+                    # Send confirmation email
+                    if user.get('email'):
+                        subject = f"ยืนยันการจอง: {event.get('title', '')}" if status == "confirmed" else f"สถานะสำรองที่นั่ง: {event.get('title', '')}"
+                        status_title = "✅ จองกิจกรรมสำเร็จ!" if status == "confirmed" else "⏳ คุณอยู่ในรายชื่อสำรอง"
+                        status_color = "#0284c7" if status == "confirmed" else "#f59e0b"
+                        status_desc = "ยืนยันที่นั่งแล้ว (Confirmed)" if status == "confirmed" else "รายชื่อสำรอง (Waitlist - จะแจ้งให้ทราบหากมีที่นั่งว่าง)"
+                        
+                        content_html = f"""
+                        <p style="font-size: 16px; margin-top: 0;">สวัสดีคุณ <strong>{user.get('name', username)}</strong>,</p>
+                        <p style="font-size: 15px; color: #334155;">ข้อมูลสถานะการจองกิจกรรมของท่านผ่านระบบ LINE Bot ได้รับการบันทึกเรียบร้อยแล้ว ดังรายละเอียดด้านล่างนี้:</p>
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 16px; border-left: 4px solid {status_color}; margin: 25px 0;">
+                            <h4 style="margin: 0 0 10px 0; color: {status_color}; font-size: 14px; text-transform: uppercase;">รายละเอียดกิจกรรม</h4>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                                <tr>
+                                    <td style="padding: 6px 0; color: #64748b; width: 30%; vertical-align: top;">กิจกรรม:</td>
+                                    <td style="padding: 6px 0; font-weight: 600; color: #1e293b;">{event.get('title', '')}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; color: #64748b; vertical-align: top;">วันที่จัด:</td>
+                                    <td style="padding: 6px 0; font-weight: 600; color: #1e293b;">{event.get('date', '')}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; color: #64748b; vertical-align: top;">สถานที่:</td>
+                                    <td style="padding: 6px 0; font-weight: 600; color: #1e293b;">{event.get('location', 'ยังไม่ระบุ')}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px 0; color: #64748b; vertical-align: top;">สถานะที่นั่ง:</td>
+                                    <td style="padding: 6px 0; font-weight: 700; color: {status_color};">{status_desc}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        """
+                        body = get_premium_email_html(
+                            title=status_title,
+                            content_html=content_html,
+                            type_color=status_color,
+                            action_url=request.host_url,
+                            action_text="ตรวจสอบประวัติการจอง"
+                        )
+                        send_email_async(user['email'], subject, body)
+                        
+                    # Reply confirmation to student via Flex Card
+                    reply_line_message(reply_token, make_booking_success_flex(user, event, status, action_url))
+                    
+                    # Notify Admin
+                    admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
+                    if admin_line_id:
+                        adm_msg = f"📢 แจ้งเตือนแอดมิน: นักศึกษา {user.get('name', username)} ({username}) ได้ทำการจองกิจกรรม '{event.get('title', '')}' ผ่าน LINE Bot เรียบร้อยแล้ว (สถานะ: {status})"
+                        send_line_notification(admin_line_id, adm_msg)
+
+                # 2. Command Score (คะแนนสะสม)
+                elif any(k in user_message_lower for k in ['คะแนน', 'แต้ม', 'ชั่วโมง', 'score', 'pts']):
+                    conn = get_db_connection()
+                    user_row = conn.execute("SELECT * FROM users WHERE line_id = ?", (user_id,)).fetchone()
+                    if not user_row:
+                        conn.close()
+                        reply_line_message(reply_token, make_unbound_flex(user_id, action_url))
+                    else:
+                        user = dict(user_row)
+                        username = user['username']
+                        parts_rows = conn.execute("SELECT * FROM participations WHERE username = ? AND status = 'approved'", (username,)).fetchall()
+                        conn.close()
+                        parts = [dict(p) for p in parts_rows]
+                        total_score = sum(safe_int(p.get('score'), 0) for p in parts)
+                        total_count = len(parts)
+                        
+                        reply_line_message(reply_token, make_scorecard_flex(user, total_score, total_count, action_url))
+
+                # 3. Command History (ประวัติการจอง)
+                elif any(k in user_message_lower for k in ['ประวัติ', 'เคย', 'history', 'hist', 'งานที่ทำ']):
+                    conn = get_db_connection()
+                    user_row = conn.execute("SELECT * FROM users WHERE line_id = ?", (user_id,)).fetchone()
+                    if not user_row:
+                        conn.close()
+                        reply_line_message(reply_token, make_unbound_flex(user_id, action_url))
+                    else:
+                        user = dict(user_row)
+                        username = user['username']
+                        regs_rows = conn.execute("SELECT * FROM registrations WHERE username = ? ORDER BY timestamp DESC LIMIT 5", (username,)).fetchall()
+                        conn.close()
+                        
+                        regs = [dict(r) for r in regs_rows]
+                        if not regs:
+                            reply_line_message(reply_token, f"📋 คุณ {user['name']} ยังไม่เคยทำรายการจองกิจกรรมใดๆ ในระบบครับ")
+                        else:
+                            reply_line_message(reply_token, make_history_flex(user, regs, action_url))
+
+                # 4. Command Today / Active Events (กิจกรรมวันนี้/กิจกรรมปัจจุบัน)
+                elif any(k in user_message_lower for k in ['วันนี้', 'กิจกรรม', 'เปิด', 'ตาราง', 'today', 'event', 'calendar']):
+                    conn = get_db_connection()
+                    active_events = conn.execute("SELECT * FROM events WHERE hidden = 0 AND status != 'เสร็จสิ้น'").fetchall()
+                    reg_rows = conn.execute("SELECT event_id, COUNT(*) as cnt FROM registrations WHERE status != 'cancelled' GROUP BY event_id").fetchall()
+                    conn.close()
+                    
+                    reg_counts = {r['event_id']: r['cnt'] for r in reg_rows}
+                    current_time_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
+                    
+                    open_events = []
+                    for e_row in active_events:
+                        e = dict(e_row)
+                        reg_start = e.get('registration_start') or ""
+                        reg_end = e.get('registration_end') or ""
+                        is_open = bool(e.get('registration_open'))
+                        if reg_start or reg_end:
+                            is_open = True
+                            if reg_start and current_time_str < reg_start:
+                                is_open = False
+                            if reg_end and current_time_str > reg_end:
+                                is_open = False
+                        if is_open:
+                            e['registered_count'] = reg_counts.get(e['id'], 0)
+                            open_events.append(e)
+                            
+                    if not open_events:
+                        reply_line_message(reply_token, "📅 ขออภัยครับ ขณะนี้ยังไม่มีกิจกรรมที่เปิดจองใหม่ในระบบ")
+                    else:
+                        carousel_bubbles = [make_event_flex_bubble(e) for e in open_events[:10]]
+                        carousel = {
+                            "type": "flex",
+                            "altText": "📅 รายการกิจกรรมเปิดจอง - SciTech Activity Bot",
+                            "contents": {
+                                "type": "carousel",
+                                "contents": carousel_bubbles
+                            }
+                        }
+                        reply_line_message(reply_token, carousel)
+
+                # 4.1 Command Profile (ข้อมูลส่วนตัว)
+                elif any(k in user_message_lower for k in ["ข้อมูลส่วนตัว", "โปรไฟล์", "profile", "my profile"]):
+                    conn = get_db_connection()
+                    user_row = conn.execute("SELECT * FROM users WHERE line_id = ?", (user_id,)).fetchone()
+                    if not user_row:
+                        conn.close()
+                        reply_line_message(reply_token, make_unbound_flex(user_id, action_url))
+                    else:
+                        user = dict(user_row)
+                        username = user['username']
+                        
+                        # Get approved score
+                        parts_rows = conn.execute("SELECT * FROM participations WHERE username = ? AND status = 'approved'", (username,)).fetchall()
+                        conn.close()
+                        
+                        parts = [dict(p) for p in parts_rows]
+                        total_score = sum(safe_int(p.get('score'), 0) for p in parts)
+                        
+                        reply_line_message(reply_token, make_profile_flex(user, total_score, action_url))
+
+                # 4.2 Command Edit Email (แก้ไขอีเมล)
+                elif any(user_message_lower.startswith(prefix) for prefix in ["แก้ไขอีเมล", "อีเมล ", "email ", "edit email "]):
+                    email_part = ""
+                    for prefix in ["แก้ไขอีเมล", "อีเมล ", "email ", "edit email "]:
+                        if user_message_lower.startswith(prefix):
+                            email_part = user_message[len(prefix):].strip()
+                            break
+                    
+                    if not email_part:
+                        reply_line_message(reply_token, "❌ กรุณาระบุอีเมลที่ต้องการแก้ไข เช่น 'แก้ไขอีเมล student@snru.ac.th'")
+                    elif not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email_part):
+                        reply_line_message(reply_token, "❌ รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง (เช่น student@snru.ac.th)")
+                    else:
+                        conn = get_db_connection()
+                        user_row = conn.execute("SELECT * FROM users WHERE line_id = ?", (user_id,)).fetchone()
+                        if not user_row:
+                            conn.close()
+                            reply_line_message(reply_token, make_unbound_flex(user_id, action_url))
+                        else:
+                            user = dict(user_row)
+                            username = user['username']
+                            with data_lock:
+                                conn.execute("UPDATE users SET email = ? WHERE username = ?", (email_part, username))
+                                conn.commit()
+                                _cache["users"]["data"] = None # Invalidate cache
+                            conn.close()
+                            reply_line_message(reply_token, f"✅ บันทึกอีเมลสำเร็จ!\n\nอีเมลใหม่ของคุณคือ: {email_part}\n\nพิมพ์ 'ข้อมูลส่วนตัว' เพื่อตรวจสอบโปรไฟล์ของคุณ")
+
+                # 4.3 Command Edit LINE ID (แก้ไขไลน์)
+                elif any(user_message_lower.startswith(prefix) for prefix in ["แก้ไขไลน์", "ไลน์ ", "line ", "edit line ", "line_id ", "edit line_id "]):
+                    line_part = ""
+                    for prefix in ["แก้ไขไลน์", "ไลน์ ", "line ", "edit line ", "line_id ", "edit line_id "]:
+                        if user_message_lower.startswith(prefix):
+                            line_part = user_message[len(prefix):].strip()
+                            break
+                    
+                    if not line_part:
+                        reply_line_message(reply_token, "❌ กรุณาระบุ LINE ID ที่ต้องการแก้ไข เช่น 'แก้ไขไลน์ Uxxxxxxxxxxx'")
+                    else:
+                        conn = get_db_connection()
+                        user_row = conn.execute("SELECT * FROM users WHERE line_id = ?", (user_id,)).fetchone()
+                        if not user_row:
+                            conn.close()
+                            reply_line_message(reply_token, make_unbound_flex(user_id, action_url))
+                        else:
+                            user = dict(user_row)
+                            username = user['username']
+                            with data_lock:
+                                conn.execute("UPDATE users SET line_id = ? WHERE username = ?", (line_part, username))
+                                conn.commit()
+                                _cache["users"]["data"] = None # Invalidate cache
+                            conn.close()
+                            
+                            warning_msg = ""
+                            if line_part != user_id:
+                                warning_msg = "\n\n⚠️ คำเตือน: คุณได้เปลี่ยน LINE ID เป็นรหัสอื่นที่ไม่ตรงกับบัญชี LINE ปัจจุบันนี้ ครั้งต่อไปคุณต้องใช้บัญชี LINE ที่มี ID ใหม่ดังกล่าวในการคุยกับบอต"
+                                
+                            reply_line_message(reply_token, f"✅ บันทึก LINE User ID สำเร็จ!\n\nLINE ID ใหม่ของคุณคือ:\n{line_part}{warning_msg}")
+
+                # 5. Command MyID (ไอดีของฉัน)
+                elif any(k in user_message_lower for k in ['ไอดี', 'รหัส', 'myid', 'id', 'uid']):
+                    msg = f"รหัส LINE User ID ของคุณคือ:\n\n{user_id}\n\n(คัดลอกรหัสนี้ไปบันทึกในหน้าโปรไฟล์เพื่อรับแจ้งเตือนได้เลยครับ ⚙️)"
+                    reply_line_message(reply_token, msg)
+
+                # 6. Command Help / Menu (ช่วยเหลือ)
+                elif any(k in user_message_lower for k in ['ช่วย', 'คู่มือ', 'วิธี', 'เมนู', 'help', 'menu', '?', 'h']):
+                    reply_line_message(reply_token, get_flex_help())
+
+                # 7. Fallback response for unhandled inputs
+                else:
+                    fallback_text = (
+                        "🤖 สวัสดีครับ! ผมเป็นบอตปฏิทินกิจกรรมนักศึกษา คณะวิทยาศาสตร์และเทคโนโลยี มรสน.\n\n"
+                        "คำสั่งที่คุณพิมพ์ไม่ถูกต้องหรือยังไม่พร้อมใช้งานในขณะนี้\n\n"
+                        "พิมพ์ **ช่วยเหลือ** หรือ **คะแนน** หรือส่งรหัสกิจกรรมย่อเพื่อจองสิทธิ์ได้ทันทีครับ!"
+                    )
+                    reply_line_message(reply_token, fallback_text)
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        
+    return 'OK', 200
 
 # =============================================================
 

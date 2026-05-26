@@ -36,7 +36,8 @@ def init_db():
             name TEXT NOT NULL,
             email TEXT,
             major TEXT,
-            role TEXT NOT NULL DEFAULT 'student'
+            role TEXT NOT NULL DEFAULT 'student',
+            line_id TEXT
         )
     ''')
     
@@ -64,6 +65,10 @@ def init_db():
     ''')
     
     # Run migration in case tables were already created
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN line_id TEXT")
+    except sqlite3.OperationalError:
+        pass
     try:
         c.execute("ALTER TABLE events ADD COLUMN registration_start TEXT")
     except sqlite3.OperationalError:

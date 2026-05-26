@@ -1323,6 +1323,19 @@ window.openEventDetail = function(evt) {
         actionsEl.innerHTML = `<button class="btn" style="background:#f1f5f9;color:#94a3b8;cursor:not-allowed;" disabled>ปิดรับสมัครแล้ว</button>`;
     }
     
+    // Render LINE Booking Quick Code
+    const lineBookingContainer = document.getElementById('detail-line-booking-container');
+    const lineBookingCode = document.getElementById('detail-line-booking-code');
+    if (lineBookingContainer && lineBookingCode) {
+        if (evt.registration_open || (isToday && evt.status !== 'เสร็จสิ้น')) {
+            const shortCode = evt.id.substring(0, 8);
+            lineBookingCode.textContent = `/book ${shortCode}`;
+            lineBookingContainer.style.display = 'flex';
+        } else {
+            lineBookingContainer.style.display = 'none';
+        }
+    }
+    
     modal.classList.add('open');
     document.body.style.overflow = 'hidden';
 }

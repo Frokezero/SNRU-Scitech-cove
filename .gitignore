@@ -189,6 +189,9 @@ cython_debug/
 database.sqlite
 database.sqlite-wal
 database.sqlite-shm
+database.db
+database.db-wal
+database.db-shm
 
 # User data JSON files (legacy, may contain passwords/info)
 users.json
