@@ -4510,19 +4510,28 @@ def line_webhook():
                             if reg_end and current_time_str > reg_end:
                                 is_open = False
                         if is_open:
-                            # Filter out past events for booking on LINE Bot
                             dt = parse_thai_date_to_comparable(e.get('date', ''))
-                            if dt and dt < today_date:
+                            if not dt:
+                                continue
+                            if dt < today_date:
+                                continue
+                                
+                            # Filter: Current month OR next month within 5 days (up to the 5th day of next month)
+                            is_current_month = (dt.year == today_date.year and dt.month == today_date.month)
+                            if today_date.month == 12:
+                                next_month = 1
+                                next_month_year = today_date.year + 1
+                            else:
+                                next_month = today_date.month + 1
+                                next_month_year = today_date.year
+                                
+                            is_next_month_within_5_days = (dt.year == next_month_year and dt.month == next_month and dt.day <= 5)
+                            
+                            if not (is_current_month or is_next_month_within_5_days):
                                 continue
                                 
                             e['registered_count'] = reg_counts.get(e['id'], 0)
-                            
-                            # Calculate sort key (distance to today) for upcoming events
-                            if dt:
-                                e['_sort_key'] = (dt - today_date).days
-                            else:
-                                e['_sort_key'] = 9999999
-                                
+                            e['_sort_key'] = (dt - today_date).days
                             open_events.append(e)
                             
                     # Sort open_events by date proximity (closest first)
