@@ -809,7 +809,7 @@ def update_activity():
     public_paths = [
         '/', '/login', '/api/login', '/api/register', '/register', 
         '/api/carousel', '/api/events', '/api/leaderboard', '/theme-loader.js',
-        '/style.css', '/script.js', '/favicon.ico'
+        '/style.css', '/script.js', '/favicon.ico', '/api/line/webhook'
     ]
     
     if request.path in public_paths or request.path.startswith('/static') or request.path.startswith('/uploads'):
@@ -2719,6 +2719,47 @@ def process_student_checkin():
             "date": event.get('date')
         }
     })
+
+# =============================================================
+
+@app.route('/api/line/webhook', methods=['POST'])
+def line_webhook():
+    # Bypass session requirement, fully public for LINE Platform requests
+    try:
+        data = request.json or {}
+        events = data.get('events', [])
+        for event in events:
+            if event.get('type') == 'message' and event.get('message', {}).get('type') == 'text':
+                user_message = event.get('message', {}).get('text', '').strip()
+                reply_token = event.get('replyToken')
+                user_id = event.get('source', {}).get('userId')
+                
+                # Reply if user types /myid or any message
+                if user_message == '/myid' or True:
+                    token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+                    if token and reply_token and user_id:
+                        url = "https://api.line.me/v2/bot/message/reply"
+                        headers = {
+                            "Content-Type": "application/json",
+                            "Authorization": f"Bearer {token}"
+                        }
+                        reply_body = {
+                            "replyToken": reply_token,
+                            "messages": [
+                                {
+                                    "type": "text",
+                                    "text": f"รหัส LINE User ID ของคุณคือ:\n\n{user_id}\n\n(ก๊อปปี้คอลัมน์ด้านบนนี้นำไปใส่หน้าโปรไฟล์ระบบกิจกรรมเพื่อรับแจ้งเตือนได้เลยครับ)"
+                                }
+                            ]
+                        }
+                        req_data = json.dumps(reply_body).encode('utf-8')
+                        req = urllib.request.Request(url, data=req_data, headers=headers, method='POST')
+                        with urllib.request.urlopen(req) as response:
+                            response.read()
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        
+    return 'OK', 200
 
 # =============================================================
 
