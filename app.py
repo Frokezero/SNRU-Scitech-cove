@@ -4516,18 +4516,11 @@ def line_webhook():
                             if dt < today_date:
                                 continue
                                 
-                            # Filter: Current month OR next month within 5 days (up to the 5th day of next month)
+                            # Filter: Current month AND within 5 days from today (today_date <= dt <= today_date + 5 days)
                             is_current_month = (dt.year == today_date.year and dt.month == today_date.month)
-                            if today_date.month == 12:
-                                next_month = 1
-                                next_month_year = today_date.year + 1
-                            else:
-                                next_month = today_date.month + 1
-                                next_month_year = today_date.year
-                                
-                            is_next_month_within_5_days = (dt.year == next_month_year and dt.month == next_month and dt.day <= 5)
+                            is_within_5_days = (today_date <= dt <= today_date + timedelta(days=5))
                             
-                            if not (is_current_month or is_next_month_within_5_days):
+                            if not (is_current_month and is_within_5_days):
                                 continue
                                 
                             e['registered_count'] = reg_counts.get(e['id'], 0)
