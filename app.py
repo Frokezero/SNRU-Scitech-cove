@@ -4496,6 +4496,7 @@ def line_webhook():
                     reg_counts = {r['event_id']: r['cnt'] for r in reg_rows}
                     current_time_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
                     
+                    today_date = datetime.now().date()
                     open_events = []
                     for e_row in active_events:
                         e = dict(e_row)
@@ -4509,8 +4510,23 @@ def line_webhook():
                             if reg_end and current_time_str > reg_end:
                                 is_open = False
                         if is_open:
+                            # Filter out past events for booking on LINE Bot
+                            dt = parse_thai_date_to_comparable(e.get('date', ''))
+                            if dt and dt < today_date:
+                                continue
+                                
                             e['registered_count'] = reg_counts.get(e['id'], 0)
+                            
+                            # Calculate sort key (distance to today) for upcoming events
+                            if dt:
+                                e['_sort_key'] = (dt - today_date).days
+                            else:
+                                e['_sort_key'] = 9999999
+                                
                             open_events.append(e)
+                            
+                    # Sort open_events by date proximity (closest first)
+                    open_events.sort(key=lambda x: x.get('_sort_key', 9999999))
                             
                     if not open_events:
                         reply_line_message(reply_token, "📅 ขออภัยครับ ขณะนี้ยังไม่มีกิจกรรมที่เปิดจองใหม่ในระบบ")
