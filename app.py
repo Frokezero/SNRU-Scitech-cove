@@ -1496,7 +1496,7 @@ def add_event():
         # Trigger LINE notification for new event
         admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
         if admin_line_id:
-            msg = f"🆕 กิจกรรมใหม่เปิดแล้ว! ขอเชิญร่วมกิจกรรม '{new_event.get('title')}' จัดขึ้นในวันที่ {new_event.get('date')} มาร่วมลงทะเบียนจองสิทธิ์กันได้เลยค่ะ/ครับ! ✨"
+            msg = f"🆕 กิจกรรมใหม่เปิดแล้ว! ขอเชิญร่วมกิจกรรม '{new_event.get('title')}' จัดขึ้นในวันที่ {new_event.get('date')} มาร่วมลงทะเบียนจองสิทธิ์กันได้เลยครับ! ✨"
             send_line_notification(admin_line_id, msg)
             
     return jsonify({'success': True, 'event': new_event})
