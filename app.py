@@ -2838,6 +2838,18 @@ def make_event_flex_bubble(event):
     short_id = event['id'][:8]
     category = event.get('category') or 'กิจกรรมทั่วไป'
     
+    # Calculate is_open status dynamically
+    current_time_str = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    reg_start = event.get('registration_start') or ""
+    reg_end = event.get('registration_end') or ""
+    is_open = bool(event.get('registration_open'))
+    if reg_start or reg_end:
+        is_open = True
+        if reg_start and current_time_str < reg_start:
+            is_open = False
+        if reg_end and current_time_str > reg_end:
+            is_open = False
+    
     if 'มหา' in category or 'มหาวิทยาลัย' in category:
         badge_color = "#3b82f6"
         badge_text = "มหาวิทยาลัย"
@@ -2969,6 +2981,27 @@ def make_event_flex_bubble(event):
                             "contents": [
                                 {
                                     "type": "text",
+                                    "text": "สถานะ:",
+                                    "size": "xs",
+                                    "color": "#64748b",
+                                    "flex": 3
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "🟢 เปิดให้จอง" if is_open else "🔒 ยังไม่เปิดให้จอง",
+                                    "size": "xs",
+                                    "color": "#22c55e" if is_open else "#ef4444",
+                                    "weight": "bold",
+                                    "flex": 7
+                                }
+                            ]
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "text",
                                     "text": "⭐ คะแนน:",
                                     "size": "xs",
                                     "color": "#64748b",
@@ -3047,11 +3080,11 @@ def make_event_flex_bubble(event):
                     "type": "button",
                     "action": {
                         "type": "message",
-                        "label": "⚡ จองด่วนทันที",
-                        "text": short_id
+                        "label": "⚡ จองด่วนทันที" if is_open else "🔒 ยังไม่เปิดจอง",
+                        "text": short_id if is_open else "กิจกรรมนี้ยังไม่เปิดให้จองครับ"
                     },
-                    "style": "primary",
-                    "color": "#10b981"
+                    "style": "primary" if is_open else "secondary",
+                    "color": "#10b981" if is_open else "#94a3b8"
                 }
             ],
         }
@@ -4500,32 +4533,22 @@ def line_webhook():
                     open_events = []
                     for e_row in active_events:
                         e = dict(e_row)
-                        reg_start = e.get('registration_start') or ""
-                        reg_end = e.get('registration_end') or ""
-                        is_open = bool(e.get('registration_open'))
-                        if reg_start or reg_end:
-                            is_open = True
-                            if reg_start and current_time_str < reg_start:
-                                is_open = False
-                            if reg_end and current_time_str > reg_end:
-                                is_open = False
-                        if is_open:
-                            dt = parse_thai_date_to_comparable(e.get('date', ''))
-                            if not dt:
-                                continue
-                            if dt < today_date:
-                                continue
-                                
-                            # Filter: Current month AND within 5 days from today (today_date <= dt <= today_date + 5 days)
-                            is_current_month = (dt.year == today_date.year and dt.month == today_date.month)
-                            is_within_5_days = (today_date <= dt <= today_date + timedelta(days=5))
+                        dt = parse_thai_date_to_comparable(e.get('date', ''))
+                        if not dt:
+                            continue
+                        if dt < today_date:
+                            continue
                             
-                            if not (is_current_month and is_within_5_days):
-                                continue
-                                
-                            e['registered_count'] = reg_counts.get(e['id'], 0)
-                            e['_sort_key'] = (dt - today_date).days
-                            open_events.append(e)
+                        # Filter: Current month AND within 5 days from today (today_date <= dt <= today_date + 5 days)
+                        is_current_month = (dt.year == today_date.year and dt.month == today_date.month)
+                        is_within_5_days = (today_date <= dt <= today_date + timedelta(days=5))
+                        
+                        if not (is_current_month and is_within_5_days):
+                            continue
+                            
+                        e['registered_count'] = reg_counts.get(e['id'], 0)
+                        e['_sort_key'] = (dt - today_date).days
+                        open_events.append(e)
                             
                     # Sort open_events by date proximity (closest first)
                     open_events.sort(key=lambda x: x.get('_sort_key', 9999999))
