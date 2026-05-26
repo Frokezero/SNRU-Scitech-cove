@@ -713,6 +713,142 @@ backup_thread = threading.Thread(target=run_backup_scheduler, daemon=True)
 backup_thread.start()
 
 # =============================================================
+# AUTOMATED LINE NOTIFICATION SCHEDULER
+# =============================================================
+NOTIF_LOG_FILE = 'sent_event_notifications.json'
+
+def load_sent_notifications():
+    with data_lock:
+        if not os.path.exists(NOTIF_LOG_FILE):
+            return {}
+        try:
+            with open(NOTIF_LOG_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+def save_sent_notifications(data):
+    with data_lock:
+        try:
+            with open(NOTIF_LOG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+        except Exception:
+            pass
+
+def check_and_send_event_notifications():
+    try:
+        today_date = datetime.now().date()
+        today_str = today_date.strftime('%Y-%m-%d')
+        tomorrow_date = today_date + timedelta(days=1)
+        
+        # Load sent notifications history to prevent duplicate sends
+        sent_history = load_sent_notifications()
+        # Clean up history older than 7 days to keep file small
+        cutoff = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        sent_history = {k: v for k, v in sent_history.items() if v >= cutoff}
+        
+        # Connect to DB to load events and their confirmed registrations
+        conn = get_db_connection()
+        active_events = conn.execute("SELECT * FROM events WHERE hidden = 0 AND status != 'เสร็จสิ้น'").fetchall()
+        
+        modified_history = False
+        for e_row in active_events:
+            e = dict(e_row)
+            dt = parse_thai_date_to_comparable(e.get('date', ''))
+            if not dt:
+                continue
+                
+            notif_type = None
+            if dt == today_date:
+                notif_type = "today"
+            elif dt == tomorrow_date:
+                notif_type = "tomorrow"
+                
+            if notif_type:
+                # Unique key: "event_id:notif_type"
+                key = f"{e['id']}:{notif_type}"
+                
+                # If already sent today (or in this cycle), skip
+                if key in sent_history:
+                    continue
+                    
+                # Fetch confirmed registrations for this event
+                regs = conn.execute(
+                    "SELECT username FROM registrations WHERE event_id = ? AND status = 'confirmed'", 
+                    (e['id'],)
+                ).fetchall()
+                
+                if regs:
+                    usernames = [r['username'] for r in regs]
+                    # Fetch line_ids of these users
+                    placeholders = ','.join('?' for _ in usernames)
+                    users = conn.execute(
+                        f"SELECT username, line_id, name FROM users WHERE username IN ({placeholders}) AND line_id != '' AND line_id IS NOT NULL",
+                        usernames
+                    ).fetchall()
+                    
+                    for u in users:
+                        line_id = u['line_id']
+                        name = u['name'] or u['username']
+                        
+                        # Draft beautiful message
+                        location = e.get('location') or 'ยังไม่ระบุสถานที่'
+                        date_str = e.get('date') or ''
+                        
+                        if notif_type == "tomorrow":
+                            msg = (
+                                f"🔔 พรุ่งนี้เจอกันนะครับ!\n\n"
+                                f"แจ้งเตือนล่วงหน้า 1 วันสำหรับกิจกรรมที่คุณได้จองไว้:\n"
+                                f"📅 กิจกรรม: {e['title']}\n"
+                                f"🗓️ วันจัดงาน: {date_str}\n"
+                                f"📍 สถานที่: {location}\n\n"
+                                f"อย่าลืมเตรียมตัวเข้าร่วมงานและเช็คอินเพื่อรับคะแนนสะสมด้วยนะครับ! 😊"
+                            )
+                        else:  # today
+                            msg = (
+                                f"📢 เริ่มต้นวันนี้แล้วนะ!\n\n"
+                                f"แจ้งเตือนวันจัดกิจกรรมที่คุณได้จองสิทธิ์ไว้:\n"
+                                f"📅 กิจกรรม: {e['title']}\n"
+                                f"📍 สถานที่: {location}\n\n"
+                                f"บอตปฏิทินขอเชิญชวนคุณเตรียมตัวเข้าร่วมกิจกรรมในวันนี้ และอย่าลืมสแกนเช็คอินกิจกรรมด้วยนะครับ! 🎉"
+                            )
+                            
+                        # Send LINE push notification
+                        send_line_notification(line_id, msg)
+                        
+                # Mark as sent
+                sent_history[key] = today_str
+                modified_history = True
+                
+        conn.close()
+        
+        if modified_history:
+            save_sent_notifications(sent_history)
+            
+    except Exception as e:
+        print(f"   [SCHEDULER] Error running notification scheduler: {e}")
+
+def run_notification_scheduler():
+    # Initial scan 60 seconds after startup to allow server to bind and ngrok to connect
+    time.sleep(60)
+    print("   [SCHEDULER] Notification scheduler thread started!")
+    check_and_send_event_notifications()
+    
+    while True:
+        # Check every 1 hour (3600 seconds)
+        current_hour = datetime.now().hour
+        # Send notifications at 08:00 AM every day
+        if current_hour == 8:
+            check_and_send_event_notifications()
+        # Sleep for 1 hour
+        time.sleep(3600)
+
+# Start notification scheduler thread
+notif_thread = threading.Thread(target=run_notification_scheduler, daemon=True)
+notif_thread.start()
+
+
+# =============================================================
 # MANUAL BACKUP API
 # =============================================================
 @app.route('/api/admin/backup-db', methods=['GET'])
