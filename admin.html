@@ -1633,9 +1633,13 @@
             }
 
             let filteredEvents = events;
-            if (searchVal) {
-                filteredEvents = events.filter(e => e.title.toLowerCase().includes(searchVal));
-            }
+        if (searchVal) {
+            filteredEvents = events.filter(e => 
+                e.title.toLowerCase().includes(searchVal) || 
+                (e.owner || '').toLowerCase().includes(searchVal) ||
+                (e.date || '').toLowerCase().includes(searchVal)
+            );
+        }
 
             const enriched = filteredEvents.map(e => {
                 const parsed = parseEventDate(e.date);
@@ -2253,9 +2257,13 @@
             }
 
             let filteredEvents = events;
-            if (searchVal) {
-                filteredEvents = events.filter(e => e.title.toLowerCase().includes(searchVal));
-            }
+        if (searchVal) {
+            filteredEvents = events.filter(e => 
+                e.title.toLowerCase().includes(searchVal) || 
+                (e.owner || '').toLowerCase().includes(searchVal) ||
+                (e.date || '').toLowerCase().includes(searchVal)
+            );
+        }
 
             // Enrich events with parsed date & diff
             const enriched = filteredEvents.map(e => {
