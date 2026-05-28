@@ -169,13 +169,28 @@ def main():
             print(e.read().decode('utf-8'))
         sys.exit(1)
         
+    # 5. Register Webhook Endpoint automatically
+    print("[*] Registering Webhook Endpoint in LINE Developers Console...")
+    webhook_url = f"{website_url}/api/line/webhook"
+    url_web = "https://api.line.me/v2/bot/channel/webhook/endpoint"
+    req_web = urllib.request.Request(url_web, data=json.dumps({"endpoint": webhook_url}).encode("utf-8"), headers=headers, method="PUT")
+    
+    try:
+        with urllib.request.urlopen(req_web) as resp:
+            resp.read()
+            print(f"[+] Webhook Endpoint successfully registered: {webhook_url}")
+    except Exception as e:
+        print(f"[x] Failed to register Webhook Endpoint: {e}")
+        if hasattr(e, 'read'):
+            print(e.read().decode('utf-8'))
+        
     # Cleanup temp file
     try:
         os.remove(resized_image_path)
     except OSError:
         pass
         
-    print("[*] Rich Menu setup completed successfully! Enjoy your new custom layout!")
+    print("[*] Rich Menu and Webhook setup completed successfully! Enjoy your new custom layout!")
 
 if __name__ == "__main__":
     main()
