@@ -3,6 +3,8 @@ import os
 load_dotenv() # Load environment variables from .env if present
 
 from flask import Flask, jsonify, request, send_from_directory, session, redirect, send_file, after_this_request
+from flask_session import Session
+import redis
 from werkzeug.security import generate_password_hash, check_password_hash
 import json
 from database import get_db_connection
@@ -326,6 +328,23 @@ app.secret_key = os.environ.get('SECRET_KEY', 'super-secret-sakon-nakhon-key')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB upload limit
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+
+# Redis Shared Session Configuration (Phase 3)
+try:
+    import redis
+    r = redis.from_url('redis://127.0.0.1:6379')
+    r.ping() # Test connection
+    
+    app.config['SESSION_TYPE'] = 'redis'
+    app.config['SESSION_PERMANENT'] = False
+    app.config['SESSION_USE_SIGNER'] = True
+    app.config['SESSION_KEY_PREFIX'] = 'activity_session:'
+    app.config['SESSION_REDIS'] = r
+    
+    server_session = Session(app)
+    print("Redis Session successfully initialized!")
+except Exception as e:
+    print(f"Failed to initialize Redis Session (fallback to default cookie session): {e}")
 
 @app.teardown_appcontext
 def close_db_connections(exception):
@@ -1402,6 +1421,60 @@ def register():
     session['username'] = username
     return jsonify({"success": True, "message": "สมัครสมาชิกสำเร็จ", "user": {"name": name, "role": "student"}})
 
+@app.route('/api/admin/dashboard-stats', methods=['GET'])
+@require_role('admin', 'major')
+def get_dashboard_stats():
+    username = session.get('username')
+    users = load_users()
+    current_user = users.get(username, {})
+    role = current_user.get('role')
+    my_major = current_user.get('name') if role == 'major' else None
+
+    conn = get_db_connection()
+    
+    if role == 'admin':
+        total_students = conn.execute("SELECT COUNT(*) as c FROM users WHERE role='student'").fetchone()['c']
+        total_events = conn.execute("SELECT COUNT(*) as c FROM events").fetchone()['c']
+        parts = conn.execute("SELECT status, event_date FROM participations").fetchall()
+    else:
+        total_students = conn.execute("SELECT COUNT(*) as c FROM users WHERE role='student' AND major=?", (my_major,)).fetchone()['c']
+        total_events = conn.execute("SELECT COUNT(*) as c FROM events").fetchone()['c']
+        parts = conn.execute("SELECT status, event_date FROM participations WHERE major=?", (my_major,)).fetchall()
+        
+    conn.close()
+
+    status_counts = {'approved': 0, 'pending': 0, 'rejected': 0}
+    trend_data = {}
+
+    for p in parts:
+        st = p['status']
+        if st in status_counts:
+            status_counts[st] += 1
+        else:
+            status_counts[st] = 1
+            
+        date_str = p['event_date']
+        if date_str:
+            parts_date = str(date_str).split()
+            if len(parts_date) >= 2:
+                month_yr = f"{parts_date[-2]} {parts_date[-1]}"
+            else:
+                month_yr = str(date_str)
+            trend_data[month_yr] = trend_data.get(month_yr, 0) + 1
+
+    trend_labels = list(trend_data.keys())
+    trend_values = [trend_data[k] for k in trend_labels]
+
+    return jsonify({
+        "success": True,
+        "total_students": total_students,
+        "total_events": total_events,
+        "total_participations": len(parts),
+        "status_counts": status_counts,
+        "trend_labels": trend_labels,
+        "trend_values": trend_values
+    })
+
 @app.route('/api/admin/users', methods=['GET'])
 def get_users():
     username = session.get('username')
@@ -2195,8 +2268,11 @@ def get_student_activities(username):
     return jsonify(student_acts)
 
 @app.route('/api/admin/participations/<part_id>', methods=['PUT', 'DELETE'])
-@require_role('admin')
+@require_role('admin', 'major')
 def manage_participation(part_id):
+    username = session.get('username')
+    users = load_users()
+    current_user = users.get(username, {})
         
     participations = load_participations()
     part_index = next((i for i, p in enumerate(participations) if p['id'] == part_id), None)
@@ -2204,13 +2280,17 @@ def manage_participation(part_id):
     if part_index is None:
         return jsonify({"success": False, "message": "ไม่พบข้อมูลประวัติ"}), 404
         
+    p = participations[part_index]
+    
+    if current_user.get('role') == 'major' and p.get('major') != current_user.get('name'):
+        return jsonify({"success": False, "message": "ไม่มีสิทธิ์จัดการข้อมูลของสาขานี้"}), 403
+        
     if request.method == 'DELETE':
         db_delete_participation(part_id)
         return jsonify({"success": True, "message": "ลบประวัติเรียบร้อยแล้ว"})
         
     if request.method == 'PUT':
         data = request.json
-        p = next((p for p in load_participations() if p['id'] == part_id), None)
         if p:
             p['score'] = data.get('score', p.get('score', 0))
             p['status'] = data.get('status', p.get('status', 'pending'))
@@ -2813,14 +2893,20 @@ def admin_reset_password():
         return jsonify({"success": True, "message": f"รีเซ็ตรหัสผ่านเป็น '{new_password}' เรียบร้อยแล้ว"})
 
 @app.route('/api/admin/participations/delete/<part_id>', methods=['POST'])
-@require_role('admin')
+@require_role('admin', 'major')
 def delete_participation(part_id):
+    username = session.get('username')
+    users = load_users()
+    current_user = users.get(username, {})
         
     participations = load_participations()
     part = next((p for p in participations if p['id'] == part_id), None)
     
     if part is None:
         return jsonify({"success": False, "message": "ไม่พบข้อมูลประวัติ"}), 404
+        
+    if current_user.get('role') == 'major' and part.get('major') != current_user.get('name'):
+        return jsonify({"success": False, "message": "ไม่มีสิทธิ์จัดการข้อมูลของสาขานี้"}), 403
         
     db_delete_participation(part_id)
     return jsonify({"success": True, "message": "ลบประวัติเรียบร้อยแล้ว"})

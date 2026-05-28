@@ -2492,30 +2492,27 @@
         function closeLeaderboardModal() { document.getElementById('leaderboard-modal').classList.remove('active'); }
         async function updateDashboardStats() {
             try {
-                document.getElementById('stat-total-events').textContent = events.length;
+                // Fetch high-performance stats from the new API
+                const statsRes = await fetch('/api/admin/dashboard-stats');
+                if (!statsRes.ok) return;
+                const stats = await statsRes.json();
                 
-                // Get student count (from paginated API)
-                const uRes = await fetch('/api/admin/reports/students?limit=1');
-                const uData = await uRes.json();
-                const totalStudents = uData.total !== undefined ? uData.total : (Array.isArray(uData) ? uData.length : 0);
-                document.getElementById('stat-total-students').textContent = totalStudents;
+                document.getElementById('stat-total-events').textContent = stats.total_events;
+                document.getElementById('stat-total-students').textContent = stats.total_students;
                 
-                // Get pending participations
-                const pRes = await fetch('/api/admin/participations');
-                const pData = await pRes.json();
-                const pendingCount = pData.filter(p => p.status === 'pending' || !p.status).length;
+                const pendingCount = stats.status_counts['pending'] || 0;
                 document.getElementById('stat-pending-works').textContent = pendingCount;
-                
                 updateNotificationBadge(pendingCount);
                 
                 if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'major')) {
                     document.getElementById('chart-section').style.display = 'block';
                     
-                    // Render status doughnut chart
-                    renderParticipationChart(pData);
+                    // Render status doughnut chart directly from aggregated data
+                    renderParticipationChartFromAgg(stats.status_counts);
                     
-                    // Fetch student list for scores bar chart
-                    const chartRes = await fetch('/api/admin/reports/students?limit=1000');
+                    // The score chart still requires student data for leaderboard-style display
+                    // Fetch top students instead of all
+                    const chartRes = await fetch('/api/admin/reports/students?limit=50');
                     const chartData = await chartRes.json();
                     renderScoreChart(chartData.data || chartData);
                 }
@@ -2902,17 +2899,13 @@
             });
         }
 
-        function renderParticipationChart(participations) {
+        function renderParticipationChartFromAgg(counts) {
             const canvas = document.getElementById('participation-chart');
             if (!canvas) return;
 
-            let confirmed = 0, pending = 0, rejected = 0;
-            participations.forEach(p => {
-                const s = p.status || 'pending';
-                if (s === 'confirmed') confirmed++;
-                else if (s === 'rejected') rejected++;
-                else pending++;
-            });
+            let confirmed = (counts['approved'] || 0) + (counts['confirmed'] || 0);
+            let pending = counts['pending'] || 0;
+            let rejected = counts['rejected'] || 0;
 
             const theme = getChartThemeColors();
 

@@ -112,7 +112,12 @@
 
                 // Fetch History
                 const resHist = await fetch('/api/student/history');
-                const history = await resHist.json();
+                if (!resHist.ok) {
+                    alert('เกิดข้อผิดพลาดในการโหลดประวัติ (Error ' + resHist.status + ')');
+                    return;
+                }
+                let history = await resHist.json();
+                if (!Array.isArray(history)) history = [];
 
                 const tbody = document.getElementById('table-body');
                 tbody.innerHTML = '';
