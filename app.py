@@ -128,14 +128,22 @@ def send_line_notification(to_id, message):
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {token}"
             }
-            body = {
-                "to": to_id,
-                "messages": [
+            
+            if isinstance(message, (dict, list)):
+                # If it's already a complete message dictionary or list of messages
+                messages = [message] if isinstance(message, dict) else message
+            else:
+                # If it's a plain string, keep it as text
+                messages = [
                     {
                         "type": "text",
-                        "text": message
+                        "text": str(message)
                     }
                 ]
+            
+            body = {
+                "to": to_id,
+                "messages": messages
             }
             
             req_data = json.dumps(body).encode('utf-8')
@@ -149,6 +157,120 @@ def send_line_notification(to_id, message):
         return
     thread = threading.Thread(target=send_line_task)
     thread.start()
+
+def get_ngrok_url():
+    try:
+        url = "http://127.0.0.1:4040/api/tunnels"
+        req = urllib.request.Request(url, method='GET')
+        with urllib.request.urlopen(req, timeout=2) as response:
+            data = json.loads(response.read().decode('utf-8'))
+        tunnels = data.get('tunnels', [])
+        for t in tunnels:
+            if t.get('proto') == 'https' or t.get('public_url', '').startswith('https://'):
+                return t.get('public_url')
+    except Exception:
+        pass
+    return "https://synopsis-exponent-peddling.ngrok-free.dev"  # Fallback
+
+def make_premium_notification_flex(title, subtitle, items, accent_color='#0ea5e9', button_text=None, button_url=None):
+    # Construct rows of items (key-value pairs)
+    contents = []
+    for k, v in items:
+        contents.append({
+            "type": "box",
+            "layout": "horizontal",
+            "margin": "md",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": str(k),
+                    "size": "sm",
+                    "color": "#94a3b8",
+                    "flex": 3
+                },
+                {
+                    "type": "text",
+                    "text": str(v),
+                    "size": "sm",
+                    "color": "#e2e8f0",
+                    "flex": 7,
+                    "weight": "bold",
+                    "wrap": True
+                }
+            ]
+        })
+        
+    bubble = {
+        "type": "flex",
+        "altText": f"🔔 {title} - SciTech Activity",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "styles": {
+                "header": {"backgroundColor": "#0f172a"},
+                "body": {"backgroundColor": "#1e293b"},
+                "footer": {"backgroundColor": "#0f172a"}
+            },
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "20px",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": str(title),
+                        "weight": "bold",
+                        "size": "xl",
+                        "color": "#ffffff"
+                    },
+                    {
+                        "type": "text",
+                        "text": str(subtitle),
+                        "size": "xs",
+                        "color": accent_color,
+                        "margin": "xs",
+                        "weight": "bold"
+                    }
+                ]
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "paddingAll": "20px",
+                "contents": [
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": "#33415540",
+                        "cornerRadius": "md",
+                        "paddingAll": "12px",
+                        "contents": contents
+                    }
+                ]
+            }
+        }
+    }
+    
+    if button_text and button_url:
+        bubble["contents"]["footer"] = {
+            "type": "box",
+            "layout": "vertical",
+            "paddingAll": "12px",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "color": accent_color,
+                    "action": {
+                        "type": "uri",
+                        "label": str(button_text),
+                        "uri": str(button_url)
+                    },
+                    "height": "sm"
+                }
+            ]
+        }
+    return bubble
 
 def get_premium_email_html(title, content_html, type_color='#0ea5e9', action_url=None, action_text=None):
     action_button_html = ""
@@ -796,21 +918,32 @@ def check_and_send_event_notifications():
                         date_str = e.get('date') or ''
                         
                         if notif_type == "tomorrow":
-                            msg = (
-                                f"🔔 พรุ่งนี้เจอกันนะครับ!\n\n"
-                                f"แจ้งเตือนล่วงหน้า 1 วันสำหรับกิจกรรมที่คุณได้จองไว้:\n"
-                                f"📅 กิจกรรม: {e['title']}\n"
-                                f"🗓️ วันจัดงาน: {date_str}\n"
-                                f"📍 สถานที่: {location}\n\n"
-                                f"อย่าลืมเตรียมตัวเข้าร่วมงานและเช็คอินเพื่อรับคะแนนสะสมด้วยนะครับ! 😊"
+                            msg = make_premium_notification_flex(
+                                title="พรุ่งนี้เจอกันนะครับ! 🔔",
+                                subtitle="แจ้งเตือนล่วงหน้า 1 วันสำหรับกิจกรรมที่คุณได้จองไว้",
+                                items=[
+                                    ("ผู้รับ", name),
+                                    ("กิจกรรม", e['title']),
+                                    ("วันจัดงาน", date_str),
+                                    ("สถานที่", location)
+                                ],
+                                accent_color="#0ea5e9",
+                                button_text="ดูข้อมูลโปรไฟล์และกิจกรรม",
+                                button_url=f"{get_ngrok_url()}/profile"
                             )
                         else:  # today
-                            msg = (
-                                f"📢 เริ่มต้นวันนี้แล้วนะ!\n\n"
-                                f"แจ้งเตือนวันจัดกิจกรรมที่คุณได้จองสิทธิ์ไว้:\n"
-                                f"📅 กิจกรรม: {e['title']}\n"
-                                f"📍 สถานที่: {location}\n\n"
-                                f"บอตปฏิทินขอเชิญชวนคุณเตรียมตัวเข้าร่วมกิจกรรมในวันนี้ และอย่าลืมสแกนเช็คอินกิจกรรมด้วยนะครับ! 🎉"
+                            msg = make_premium_notification_flex(
+                                title="เริ่มต้นวันนี้แล้วนะ! 📢",
+                                subtitle="แจ้งเตือนวันจัดกิจกรรมที่คุณได้จองสิทธิ์ไว้",
+                                items=[
+                                    ("ผู้รับ", name),
+                                    ("กิจกรรม", e['title']),
+                                    ("วันจัดงาน", date_str),
+                                    ("สถานที่", location)
+                                ],
+                                accent_color="#f59e0b",
+                                button_text="ดูข้อมูลโปรไฟล์และกิจกรรม",
+                                button_url=f"{get_ngrok_url()}/profile"
                             )
                             
                         # Send LINE push notification
@@ -1496,7 +1629,20 @@ def add_event():
         # Trigger LINE notification for new event
         admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
         if admin_line_id:
-            msg = f"🆕 กิจกรรมใหม่เปิดแล้ว! ขอเชิญร่วมกิจกรรม '{new_event.get('title')}' จัดขึ้นในวันที่ {new_event.get('date')} มาร่วมลงทะเบียนจองสิทธิ์กันได้เลยครับ! ✨"
+            msg = make_premium_notification_flex(
+                title="กิจกรรมใหม่เปิดตัวแล้ว! 🆕",
+                subtitle="ขอเชิญชวนนักศึกษาจองสิทธิ์เข้าร่วม",
+                items=[
+                    ("ชื่อกิจกรรม", new_event.get('title')),
+                    ("วันที่จัด", new_event.get('date')),
+                    ("สถานที่", new_event.get('location') or 'ยังไม่ระบุสถานที่'),
+                    ("ผู้จัด/สาขา", new_event.get('owner') or 'สโมสรนักศึกษา'),
+                    ("คะแนนสะสม", f"+{new_event.get('score', 0)} คะแนน ⭐")
+                ],
+                accent_color="#8b5cf6",
+                button_text="ดูรายการกิจกรรมและจองสิทธิ์",
+                button_url=f"{get_ngrok_url()}/"
+            )
             send_line_notification(admin_line_id, msg)
             
     return jsonify({'success': True, 'event': new_event})
@@ -1724,14 +1870,49 @@ def register_event(event_id):
     # 1. Send to Student (if they have configured line_id)
     student_line_id = user_info.get('line_id')
     if student_line_id:
-        status_thai = "สำเร็จแล้ว 🎉" if status == "confirmed" else "เรียบร้อยแล้ว (แต่อยู่ในคิวรายชื่อสำรอง)"
-        std_msg = f"สวัสดีคุณ {user_info.get('name', username)}! คุณได้ทำรายการจองสิทธิ์เข้าร่วมกิจกรรม '{event.get('title', '')}' {status_thai}\n📅 วันที่จัด: {event.get('date', '')}\n📍 สถานที่: {event.get('location', 'ยังไม่ระบุ')}"
+        if status == "confirmed":
+            title = "จองกิจกรรมสำเร็จ! 🎫"
+            subtitle = "คุณได้รับสิทธิ์เข้าร่วมกิจกรรมเรียบร้อยแล้ว"
+            status_desc = "ยืนยันสิทธิ์แล้ว (Confirmed) ✅"
+            color = "#10b981"
+        else:
+            title = "ลงชื่อคิวสำรองแล้ว ⏳"
+            subtitle = "คุณอยู่ในรายชื่อสำรองของกิจกรรมนี้"
+            status_desc = "รายชื่อสำรอง (Waiting List) ⏳"
+            color = "#f59e0b"
+            
+        std_msg = make_premium_notification_flex(
+            title=title,
+            subtitle=subtitle,
+            items=[
+                ("ผู้รับ", user_info.get('name', username)),
+                ("กิจกรรม", event.get('title', '')),
+                ("สถานะการจอง", status_desc),
+                ("วันที่จัด", event.get('date', '')),
+                ("สถานที่", event.get('location', 'ยังไม่ระบุ'))
+            ],
+            accent_color=color,
+            button_text="ดูข้อมูลการจองของฉัน",
+            button_url=f"{get_ngrok_url()}/profile"
+        )
         send_line_notification(student_line_id, std_msg)
         
     # 2. Send to Admin / Group
     admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
     if admin_line_id:
-        adm_msg = f"📢 แจ้งเตือนแอดมิน: นักศึกษา {user_info.get('name', username)} ({username}) ได้จองเข้าร่วมกิจกรรม '{event.get('title', '')}' เรียบร้อยแล้ว (สถานะ: {status})"
+        status_desc = "ยืนยันสิทธิ์สำเร็จ" if status == "confirmed" else "รายชื่อสำรอง"
+        adm_msg = make_premium_notification_flex(
+            title="มีผู้จองกิจกรรมใหม่ (Web) 📢",
+            subtitle="แจ้งเตือนการสมัครเข้าร่วมกิจกรรมใหม่ผ่านเว็บไซต์",
+            items=[
+                ("นักศึกษา", f"{user_info.get('name', username)} ({username})"),
+                ("กิจกรรม", event.get('title', '')),
+                ("สถานะการจอง", status_desc)
+            ],
+            accent_color="#6366f1",
+            button_text="เข้าสู่หน้าผู้ดูแลระบบ",
+            button_url=f"{get_ngrok_url()}/admin"
+        )
         send_line_notification(admin_line_id, adm_msg)
 
     return jsonify({"success": True, "message": "จองสำเร็จ!" if status == "confirmed" else "ลงชื่อสำรองสำเร็จ!", "status": status, "registration": reg})
@@ -1927,7 +2108,20 @@ def submit_participation():
             # Send LINE Notification to Student
             student_line_id = user.get('line_id')
             if student_line_id:
-                msg = f"📋 ได้รับเอกสาร/รูปภาพยืนยันผลงานเข้าร่วมกิจกรรมแล้วครับ!\n\n🏆 กิจกรรม: {actual_title}\n📅 วันที่จัดกิจกรรม: {actual_date}\n\nขณะนี้อยู่ระหว่างรอการตรวจสอบหลักฐานจากคณะวิชา หากผ่านการอนุมัติจะมีการแจ้งเตือนคะแนนสะสมให้ทราบทันทีครับ"
+                msg = make_premium_notification_flex(
+                    title="ได้รับหลักฐานกิจกรรมแล้ว 📋",
+                    subtitle="เจ้าหน้าที่กำลังดำเนินการตรวจสอบความถูกต้อง",
+                    items=[
+                        ("ผู้ส่ง", user['name']),
+                        ("กิจกรรม", actual_title),
+                        ("วันที่จัด", actual_date),
+                        ("สถานะ", "รอการตรวจสอบ (Pending) ⏳"),
+                        ("คะแนนที่จะได้รับ", f"+{actual_score} คะแนนสะสม ⭐")
+                    ],
+                    accent_color="#38bdf8",
+                    button_text="ดูรายการประวัติของฉัน",
+                    button_url=f"{get_ngrok_url()}/profile"
+                )
                 send_line_notification(student_line_id, msg)
             
             # Send confirmation email
@@ -2189,9 +2383,31 @@ def update_participation_status():
                 student_line_id = users[target_username].get('line_id')
                 if student_line_id:
                     if new_status == 'approved':
-                        msg = f"🎉 ยินด้วยครับ! ผลงานกิจกรรม '{event_title}' ของคุณได้รับการตรวจสอบและอนุมัติเรียบร้อยแล้ว\n⭐ ได้รับคะแนน: +{event_score} คะแนนสะสม!"
-                    elif new_status == 'rejected':
-                        msg = f"⚠️ ผลงานหลักฐานกิจกรรม '{event_title}' ของคุณไม่ผ่านการอนุมัติ (Rejected)\nกรุณาเข้าสู่ระบบเพื่อดูรายละเอียดและอัปโหลดภาพหลักฐานใหม่อีกครั้งครับ"
+                        msg = make_premium_notification_flex(
+                            title="ผลงานกิจกรรมได้รับการอนุมัติ! 🎉",
+                            subtitle="ชั่วโมงกิจกรรมของท่านได้รับการบันทึกเรียบร้อยแล้วครับ",
+                            items=[
+                                ("ชื่อกิจกรรม", event_title),
+                                ("สถานะ", "อนุมัติแล้ว (Approved) ✅"),
+                                ("คะแนนที่ได้รับ", f"+{event_score} คะแนนสะสม ⭐")
+                            ],
+                            accent_color="#10b981",
+                            button_text="ตรวจสอบคะแนนสะสม",
+                            button_url=f"{get_ngrok_url()}/profile"
+                        )
+                    else:
+                        msg = make_premium_notification_flex(
+                            title="ผลงานกิจกรรมไม่ผ่านการอนุมัติ ⚠️",
+                            subtitle="กรุณาตรวจสอบหลักฐานและอัปโหลดข้อมูลใหม่อีกครั้ง",
+                            items=[
+                                ("ชื่อกิจกรรม", event_title),
+                                ("สถานะ", "ไม่ผ่านการอนุมัติ (Rejected) ❌"),
+                                ("คำแนะนำ", "กรุณาตรวจสอบรูปภาพหรือติดต่อแอดมินเพื่อส่งหลักฐานใหม่ครับ")
+                            ],
+                            accent_color="#ef4444",
+                            button_text="อัปโหลดหลักฐานใหม่",
+                            button_url=f"{get_ngrok_url()}/profile"
+                        )
                     send_line_notification(student_line_id, msg)
                     
             conn.commit()
@@ -2316,9 +2532,31 @@ def update_status_bulk():
                 student_line_id = users[target_u].get('line_id')
                 if student_line_id:
                     if new_status == 'approved':
-                        msg = f"🎉 ยินดีด้วยครับ! ผลงานหลักฐานกิจกรรม '{event_title}' ของคุณได้รับการตรวจสอบและอนุมัติเรียบร้อยแล้ว\n⭐ ได้รับคะแนนสะสม: +{final_score} คะแนนครับ!"
-                    elif new_status == 'rejected':
-                        msg = f"⚠️ ผลงานหลักฐานกิจกรรม '{event_title}' ของคุณไม่ผ่านการอนุมัติ (Rejected)\nกรุณาเข้าสู่ระบบเพื่อดูรายละเอียดและอัปโหลดภาพหลักฐานใหม่อีกครั้งครับ"
+                        msg = make_premium_notification_flex(
+                            title="ผลงานกิจกรรมได้รับการอนุมัติ! 🎉",
+                            subtitle="ชั่วโมงกิจกรรมของท่านได้รับการบันทึกเรียบร้อยแล้วครับ",
+                            items=[
+                                ("ชื่อกิจกรรม", event_title),
+                                ("สถานะ", "อนุมัติแล้ว (Approved) ✅"),
+                                ("คะแนนที่ได้รับ", f"+{final_score} คะแนนสะสม ⭐")
+                            ],
+                            accent_color="#10b981",
+                            button_text="ตรวจสอบคะแนนสะสม",
+                            button_url=f"{get_ngrok_url()}/profile"
+                        )
+                    else:
+                        msg = make_premium_notification_flex(
+                            title="ผลงานกิจกรรมไม่ผ่านการอนุมัติ ⚠️",
+                            subtitle="กรุณาตรวจสอบหลักฐานและอัปโหลดข้อมูลใหม่อีกครั้ง",
+                            items=[
+                                ("ชื่อกิจกรรม", event_title),
+                                ("สถานะ", "ไม่ผ่านการอนุมัติ (Rejected) ❌"),
+                                ("คำแนะนำ", "กรุณาตรวจสอบรูปภาพหรือติดต่อแอดมินเพื่อส่งหลักฐานใหม่ครับ")
+                            ],
+                            accent_color="#ef4444",
+                            button_text="อัปโหลดหลักฐานใหม่",
+                            button_url=f"{get_ngrok_url()}/profile"
+                        )
                     send_line_notification(student_line_id, msg)
 
             conn.commit()
@@ -2858,7 +3096,20 @@ def process_student_checkin():
     # Send LINE Notification to Student
     student_line_id = user.get('line_id')
     if student_line_id:
-        msg = f"✅ เช็คอินเข้าร่วมกิจกรรมสำเร็จเรียบร้อยแล้วครับ!\n\n🏆 กิจกรรม: {event.get('title')}\n📅 วันที่จัดกิจกรรม: {event.get('date', '')}\n⭐ คุณได้รับคะแนนสะสม: +{event.get('score', 0)} คะแนนเรียบร้อยแล้วครับ!"
+        msg = make_premium_notification_flex(
+            title="เช็คอินเข้าร่วมกิจกรรมสำเร็จ! ✅",
+            subtitle="ชั่วโมงคะแนนถูกสะสมเข้าระบบเรียบร้อยแล้วครับ",
+            items=[
+                ("ผู้เช็คอิน", user['name']),
+                ("กิจกรรม", event.get('title')),
+                ("วันที่จัด", event.get('date', '')),
+                ("สถานที่", event.get('location', 'ยังไม่ระบุ')),
+                ("คะแนนสะสม", f"+{event.get('score', 0)} คะแนนสะสม ⭐")
+            ],
+            accent_color="#10b981",
+            button_text="ดูแดชบอร์ด/คะแนนของฉัน",
+            button_url=f"{get_ngrok_url()}/profile"
+        )
         send_line_notification(student_line_id, msg)
     
     student_email = user.get('email')
@@ -4499,7 +4750,18 @@ def line_webhook():
                     
                     admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
                     if admin_line_id:
-                        adm_msg = f"🔔 แจ้งเตือนแอดมิน: นักศึกษา {user.get('name', username)} ({username}) ได้ทำการยกเลิกการจองกิจกรรม '{reg['event_title']}' ผ่าน LINE Bot"
+                        adm_msg = make_premium_notification_flex(
+                            title="นักศึกษายกเลิกการจอง ⚠️",
+                            subtitle="แจ้งเตือนการยกเลิกการสมัครร่วมกิจกรรมผ่าน LINE Bot",
+                            items=[
+                                ("นักศึกษา", f"{user.get('name', username)} ({username})"),
+                                ("กิจกรรม", reg['event_title']),
+                                ("ช่องทาง", "LINE Bot")
+                            ],
+                            accent_color="#ef4444",
+                            button_text="เข้าสู่หน้าผู้ดูแลระบบ",
+                            button_url=f"{get_ngrok_url()}/admin"
+                        )
                         send_line_notification(admin_line_id, adm_msg)
                     continue
 
@@ -4639,7 +4901,20 @@ def line_webhook():
                     # Notify Admin
                     admin_line_id = os.environ.get("LINE_ADMIN_USER_ID")
                     if admin_line_id:
-                        adm_msg = f"📢 แจ้งเตือนแอดมิน: นักศึกษา {user.get('name', username)} ({username}) ได้ทำการจองกิจกรรม '{event.get('title', '')}' ผ่าน LINE Bot เรียบร้อยแล้ว (สถานะ: {status})"
+                        status_desc = "ยืนยันสิทธิ์สำเร็จ" if status == "confirmed" else "รายชื่อสำรอง"
+                        adm_msg = make_premium_notification_flex(
+                            title="มีผู้จองกิจกรรมใหม่ (LINE Bot) 📢",
+                            subtitle="แจ้งเตือนการสมัครร่วมกิจกรรมผ่านระบบอัตโนมัติ",
+                            items=[
+                                ("นักศึกษา", f"{user.get('name', username)} ({username})"),
+                                ("กิจกรรม", event.get('title', '')),
+                                ("สถานะการจอง", status_desc),
+                                ("ช่องทาง", "LINE Bot")
+                            ],
+                            accent_color="#6366f1",
+                            button_text="เข้าสู่หน้าผู้ดูแลระบบ",
+                            button_url=f"{get_ngrok_url()}/admin"
+                        )
                         send_line_notification(admin_line_id, adm_msg)
 
                 # 2. Command Score (คะแนนสะสม)
