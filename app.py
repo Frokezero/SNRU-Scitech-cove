@@ -2311,6 +2311,15 @@ def update_status_bulk():
                     add_notification(target_u, "กิจกรรมผ่านแล้ว!", f"การเข้าร่วมกิจกรรม {event_title} ของคุณได้รับการอนุมัติ และคุณได้รับ {final_score} คะแนน", "success")
                 elif new_status == 'rejected':
                     add_notification(target_u, "กิจกรรมไม่ผ่าน", f"การเข้าร่วมกิจกรรม {event_title} ของคุณไม่ได้รับการอนุมัติ กรุณาติดต่อแอดมินสาขา", "danger")
+                    
+                # Trigger LINE Notification to Student
+                student_line_id = users[target_u].get('line_id')
+                if student_line_id:
+                    if new_status == 'approved':
+                        msg = f"🎉 ยินดีด้วยครับ! ผลงานหลักฐานกิจกรรม '{event_title}' ของคุณได้รับการตรวจสอบและอนุมัติเรียบร้อยแล้ว\n⭐ ได้รับคะแนนสะสม: +{final_score} คะแนนครับ!"
+                    elif new_status == 'rejected':
+                        msg = f"⚠️ ผลงานหลักฐานกิจกรรม '{event_title}' ของคุณไม่ผ่านการอนุมัติ (Rejected)\nกรุณาเข้าสู่ระบบเพื่อดูรายละเอียดและอัปโหลดภาพหลักฐานใหม่อีกครั้งครับ"
+                    send_line_notification(student_line_id, msg)
 
             conn.commit()
             _cache["participations"]["data"] = None
