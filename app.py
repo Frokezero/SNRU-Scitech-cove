@@ -1910,7 +1910,7 @@ def register_event(event_id):
                 ("สถานะการจอง", status_desc)
             ],
             accent_color="#6366f1",
-            button_text="เข้าสู่หน้าผู้ดูแลระบบ",
+            button_text="เข้าสู่ระบบเพื่อตรวจสอบ",
             button_url=f"{get_ngrok_url()}/admin"
         )
         send_line_notification(admin_line_id, adm_msg)
@@ -4759,7 +4759,7 @@ def line_webhook():
                                 ("ช่องทาง", "LINE Bot")
                             ],
                             accent_color="#ef4444",
-                            button_text="เข้าสู่หน้าผู้ดูแลระบบ",
+                            button_text="เข้าสู่ระบบเพื่อตรวจสอบ",
                             button_url=f"{get_ngrok_url()}/admin"
                         )
                         send_line_notification(admin_line_id, adm_msg)
@@ -4912,7 +4912,7 @@ def line_webhook():
                                 ("ช่องทาง", "LINE Bot")
                             ],
                             accent_color="#6366f1",
-                            button_text="เข้าสู่หน้าผู้ดูแลระบบ",
+                            button_text="เข้าสู่ระบบเพื่อตรวจสอบ",
                             button_url=f"{get_ngrok_url()}/admin"
                         )
                         send_line_notification(admin_line_id, adm_msg)
