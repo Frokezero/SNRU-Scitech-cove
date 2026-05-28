@@ -1924,6 +1924,12 @@ def submit_participation():
             }
             db_save_participation(record)
             
+            # Send LINE Notification to Student
+            student_line_id = users[username].get('line_id')
+            if student_line_id:
+                msg = f"📋 ได้รับเอกสาร/รูปภาพยืนยันผลงานเข้าร่วมกิจกรรมแล้วครับ!\n\n🏆 กิจกรรม: {actual_title}\n📅 วันที่จัดกิจกรรม: {actual_date}\n\nขณะนี้อยู่ระหว่างรอการตรวจสอบหลักฐานจากคณะวิชา หากผ่านการอนุมัติจะมีการแจ้งเตือนคะแนนสะสมให้ทราบทันทีครับ"
+                send_line_notification(student_line_id, msg)
+            
             # Send confirmation email
             student_email = users[username].get('email')
             if student_email:
@@ -2836,6 +2842,15 @@ def process_student_checkin():
         "status": "approved"
     }
     db_save_participation(record)
+    
+    # Add in-app Notification
+    add_notification(username, "เช็คอินเข้าร่วมกิจกรรมสำเร็จ!", f"คุณได้เช็คอินกิจกรรม {event.get('title')} และได้รับ {event.get('score', 0)} คะแนนเรียบร้อยแล้วครับ", "success")
+    
+    # Send LINE Notification to Student
+    student_line_id = user.get('line_id')
+    if student_line_id:
+        msg = f"✅ เช็คอินเข้าร่วมกิจกรรมสำเร็จเรียบร้อยแล้วครับ!\n\n🏆 กิจกรรม: {event.get('title')}\n📅 วันที่จัดกิจกรรม: {event.get('date', '')}\n⭐ คุณได้รับคะแนนสะสม: +{event.get('score', 0)} คะแนนเรียบร้อยแล้วครับ!"
+        send_line_notification(student_line_id, msg)
     
     student_email = user.get('email')
     if student_email:
