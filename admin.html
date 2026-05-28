@@ -1040,8 +1040,8 @@
             <!-- Custom Progress Bar / Countdown -->
             <div style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: var(--slate-500);">
-                    <span>คิวอาร์เปลี่ยนรหัสใหม่ทุก 60 วินาที</span>
-                    <span id="qr-timer-text" style="color: var(--primary); font-size: 14px; font-weight: 700; font-family: monospace;">60s</span>
+                    <span>คิวอาร์เปลี่ยนรหัสใหม่ทุก 5 นาที</span>
+                    <span id="qr-timer-text" style="color: var(--primary); font-size: 14px; font-weight: 700; font-family: monospace;">300s</span>
                 </div>
                 <div style="height: 6px; width: 100%; background: var(--slate-100); border-radius: 10px; overflow: hidden; border: 1px solid var(--slate-200);">
                     <div id="qr-progress-bar" style="height: 100%; width: 100%; background: #10b981; border-radius: 10px; transition: width 1s linear;"></div>
@@ -1363,7 +1363,7 @@
         // --- QR Check-In Modal Functions ---
         let qrInterval = null;
         let qrCountdownInterval = null;
-        let qrTimeRemaining = 60;
+        let qrTimeRemaining = 300;
         let currentQREventId = null;
 
         async function openQRModal(eventId, eventTitle) {
@@ -1381,8 +1381,8 @@
             if (qrInterval) clearInterval(qrInterval);
             if (qrCountdownInterval) clearInterval(qrCountdownInterval);
             
-            // Set up polling interval (every 60 seconds)
-            qrInterval = setInterval(generateQRToken, 60000);
+            // Set up polling interval (every 300 seconds)
+            qrInterval = setInterval(generateQRToken, 300000);
             
             // Set up countdown timer (every 1 second)
             startQRCountdown();
@@ -1421,7 +1421,7 @@
                     }
                     
                     // Reset countdown
-                    qrTimeRemaining = 60;
+                    qrTimeRemaining = 300;
                     updateQRProgressBar();
                     
                     // Pre-load image before hiding overlay
@@ -1444,7 +1444,7 @@
             qrCountdownInterval = setInterval(() => {
                 qrTimeRemaining--;
                 if (qrTimeRemaining < 0) {
-                    qrTimeRemaining = 60;
+                    qrTimeRemaining = 300;
                 }
                 updateQRProgressBar();
             }, 1000);
@@ -1454,15 +1454,15 @@
             const bar = document.getElementById('qr-progress-bar');
             const text = document.getElementById('qr-timer-text');
             if (bar && text) {
-                const percentage = (qrTimeRemaining / 60) * 100;
+                const percentage = (qrTimeRemaining / 300) * 100;
                 bar.style.width = `${percentage}%`;
                 text.textContent = `${qrTimeRemaining}s`;
                 
                 // Color transition from green to yellow to red
-                if (qrTimeRemaining > 30) {
+                if (qrTimeRemaining > 150) {
                     bar.style.background = '#10b981';
                     text.style.color = '#10b981';
-                } else if (qrTimeRemaining > 10) {
+                } else if (qrTimeRemaining > 50) {
                     bar.style.background = '#f59e0b';
                     text.style.color = '#f59e0b';
                 } else {

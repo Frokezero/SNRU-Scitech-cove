@@ -1912,8 +1912,8 @@ def submit_participation():
             record = {
                 "id": str(uuid.uuid4()),
                 "username": username,
-                "student_name": users[username]['name'],
-                "major": users[username].get('major'),
+                "student_name": user['name'],
+                "major": user.get('major'),
                 "event_id": event_id,
                 "event_title": actual_title,
                 "event_date": actual_date,
@@ -1925,17 +1925,17 @@ def submit_participation():
             db_save_participation(record)
             
             # Send LINE Notification to Student
-            student_line_id = users[username].get('line_id')
+            student_line_id = user.get('line_id')
             if student_line_id:
                 msg = f"📋 ได้รับเอกสาร/รูปภาพยืนยันผลงานเข้าร่วมกิจกรรมแล้วครับ!\n\n🏆 กิจกรรม: {actual_title}\n📅 วันที่จัดกิจกรรม: {actual_date}\n\nขณะนี้อยู่ระหว่างรอการตรวจสอบหลักฐานจากคณะวิชา หากผ่านการอนุมัติจะมีการแจ้งเตือนคะแนนสะสมให้ทราบทันทีครับ"
                 send_line_notification(student_line_id, msg)
             
             # Send confirmation email
-            student_email = users[username].get('email')
+            student_email = user.get('email')
             if student_email:
                 subject = f"📋 ได้รับเอกสาร/รูปภาพยืนยันผลงานแล้ว: {actual_title}"
                 content_html = f"""
-                <p>สวัสดีคุณ <strong>{users[username]['name']}</strong>,</p>
+                <p>สวัสดีคุณ <strong>{user['name']}</strong>,</p>
                 <p>ระบบได้รับเอกสาร/รูปภาพหลักฐานยืนยันการเข้าร่วมกิจกรรมของคุณเรียบร้อยแล้ว รายละเอียดมีดังนี้:</p>
                 <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid #0284c7; margin: 20px 0;">
                     <p style="margin: 0 0 8px 0;"><strong>🏆 กิจกรรม:</strong> {actual_title}</p>
@@ -1953,8 +1953,8 @@ def submit_participation():
                 send_email_async(student_email, subject, body)
             
             # Notify major/admin users about the new submission
-            student_name = users[username]['name']
-            student_major = users[username].get('major', '')
+            student_name = user['name']
+            student_major = user.get('major', '')
             all_users = load_users()
             for u, udata in all_users.items():
                 if udata.get('role') == 'admin':
@@ -2795,8 +2795,8 @@ def process_student_checkin():
         event_id = payload.get('event_id')
         token_time = payload.get('timestamp', 0)
         
-        if time.time() - token_time > 60:
-            return jsonify({"success": False, "message": "คิวอาร์โค้ดนี้หมดอายุแล้ว (จำกัดเวลา 60 วินาที) กรุณาสแกนรหัสล่าสุดจากหน้าจอแอดมิน"}), 400
+        if time.time() - token_time > 300:
+            return jsonify({"success": False, "message": "คิวอาร์โค้ดนี้หมดอายุแล้ว (จำกัดเวลา 5 นาที) กรุณาสแกนรหัสล่าสุดจากหน้าจอแอดมิน"}), 400
             
     except Exception as e:
         return jsonify({"success": False, "message": f"เกิดข้อผิดพลาดในการตรวจสอบ Token: {str(e)}"}), 400
