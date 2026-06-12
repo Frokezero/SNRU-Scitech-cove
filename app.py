@@ -364,20 +364,18 @@ USER_FILE = 'users.json'
 data_lock = threading.RLock()
 
 def load_users():
-    with data_lock:
-        conn = get_db_connection()
-        rows = conn.execute('SELECT * FROM users').fetchall()
-        conn.close()
-        return {r['username']: dict(r) for r in rows}
+    conn = get_db_connection()
+    rows = conn.execute('SELECT * FROM users').fetchall()
+    conn.close()
+    return {r['username']: dict(r) for r in rows}
 
 def db_get_user(username):
     if not username:
         return None
-    with data_lock:
-        conn = get_db_connection()
-        row = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        conn.close()
-        return dict(row) if row else None
+    conn = get_db_connection()
+    row = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 def db_save_user(username, data):
     with data_lock:
@@ -452,20 +450,18 @@ if not os.path.exists(ACTIVITIES_UPLOAD_FOLDER):
 PARTICIPATIONS_FILE = 'participations.json'
 
 def load_participations():
-    with data_lock:
-        conn = get_db_connection()
-        rows = conn.execute('SELECT * FROM participations').fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+    conn = get_db_connection()
+    rows = conn.execute('SELECT * FROM participations').fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 def db_get_user_participations(username):
     if not username:
         return []
-    with data_lock:
-        conn = get_db_connection()
-        rows = conn.execute('SELECT * FROM participations WHERE username = ?', (username,)).fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+    conn = get_db_connection()
+    rows = conn.execute('SELECT * FROM participations WHERE username = ?', (username,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 def db_save_participation(p):
     with data_lock:
@@ -521,29 +517,26 @@ def allowed_file(filename):
 REGISTRATIONS_FILE = 'registrations.json'
 
 def load_registrations():
-    with data_lock:
-        conn = get_db_connection()
-        rows = conn.execute('SELECT * FROM registrations').fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+    conn = get_db_connection()
+    rows = conn.execute('SELECT * FROM registrations').fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 def db_get_user_registrations(username):
     if not username:
         return []
-    with data_lock:
-        conn = get_db_connection()
-        rows = conn.execute('SELECT * FROM registrations WHERE username = ?', (username,)).fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+    conn = get_db_connection()
+    rows = conn.execute('SELECT * FROM registrations WHERE username = ?', (username,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 def db_get_event_registrations(event_id):
     if not event_id:
         return []
-    with data_lock:
-        conn = get_db_connection()
-        rows = conn.execute('SELECT * FROM registrations WHERE event_id = ?', (event_id,)).fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+    conn = get_db_connection()
+    rows = conn.execute('SELECT * FROM registrations WHERE event_id = ?', (event_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 def db_add_registration(r):
     with data_lock:
@@ -573,11 +566,10 @@ def db_update_registration_status(reg_id, status):
 
 
 def load_carousel():
-    with data_lock:
-        if not os.path.exists('carousel.json'):
-            return []
-        with open('carousel.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
+    if not os.path.exists('carousel.json'):
+        return []
+    with open('carousel.json', 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 def save_carousel(images):
     with data_lock:
@@ -719,28 +711,27 @@ def get_certificate_data(participation_id):
     })
 
 def load_events():
-    with data_lock:
-        now = time.time()
-        if _cache["events"]["data"] is not None and (now - _cache["events"]["time"] < CACHE_TTL):
-            return _cache["events"]["data"]
-            
-        conn = get_db_connection()
-        rows = conn.execute('SELECT * FROM events').fetchall()
-        conn.close()
-        data = [dict(r) for r in rows]
+    now = time.time()
+    if _cache["events"]["data"] is not None and (now - _cache["events"]["time"] < CACHE_TTL):
+        return _cache["events"]["data"]
         
-        # Ensure correct boolean types and defaults
-        for e in data:
-            e['hidden'] = bool(e.get('hidden'))
-            e['registration_open'] = bool(e.get('registration_open'))
-            if 'owner' not in e: e['owner'] = "สโมสรนักศึกษา"
-            e['registration_start'] = e.get('registration_start') or ""
-            e['registration_end'] = e.get('registration_end') or ""
-            e['latitude'] = safe_float(e.get('latitude'), 17.18994)
-            e['longitude'] = safe_float(e.get('longitude'), 104.09153)
-            
-        _cache["events"] = {"data": data, "time": now}
-        return data
+    conn = get_db_connection()
+    rows = conn.execute('SELECT * FROM events').fetchall()
+    conn.close()
+    data = [dict(r) for r in rows]
+    
+    # Ensure correct boolean types and defaults
+    for e in data:
+        e['hidden'] = bool(e.get('hidden'))
+        e['registration_open'] = bool(e.get('registration_open'))
+        if 'owner' not in e: e['owner'] = "สโมสรนักศึกษา"
+        e['registration_start'] = e.get('registration_start') or ""
+        e['registration_end'] = e.get('registration_end') or ""
+        e['latitude'] = safe_float(e.get('latitude'), 17.18994)
+        e['longitude'] = safe_float(e.get('longitude'), 104.09153)
+        
+    _cache["events"] = {"data": data, "time": now}
+    return data
 
 def db_add_event(e):
     with data_lock:
@@ -2126,7 +2117,6 @@ def submit_participation():
                 return jsonify({"success": False, "message": "ไฟล์มีขนาดใหญ่เกินไป (จำกัด 5MB)"}), 400
 
             # Compress and save using Pillow to optimize server storage space
-            saved_via_pillow = False
             try:
                 from PIL import Image
                 img = Image.open(file)
@@ -2154,14 +2144,9 @@ def submit_participation():
                     img.save(filepath, format='PNG', optimize=True)
                 else:
                     img.save(filepath, format='JPEG', quality=80, optimize=True)
-                saved_via_pillow = True
             except Exception as e:
-                print(f"Pillow compression failed, falling back to raw save: {e}")
-                # Reset stream pointer
-                file.seek(0)
-                
-            if not saved_via_pillow:
-                file.save(filepath)
+                print(f"Pillow image validation/processing failed: {e}")
+                return jsonify({"success": False, "message": "ไฟล์รูปภาพไม่ถูกต้องหรือชำรุด กรุณาอัปโหลดรูปภาพที่เป็นมาตรฐาน (PNG, JPG, JPEG, GIF, WebP)"}), 400
             
             record = {
                 "id": str(uuid.uuid4()),
@@ -3186,7 +3171,7 @@ def process_student_checkin():
         if file_size > 5 * 1024 * 1024:
             return jsonify({"success": False, "message": "ไฟล์รูปภาพมีขนาดใหญ่เกินไป (จำกัด 5MB)"}), 400
             
-        saved_via_pillow = False
+        # Compress and save using Pillow to optimize server storage space
         try:
             from PIL import Image
             img = Image.open(file)
@@ -3214,13 +3199,9 @@ def process_student_checkin():
                 img.save(filepath, format='PNG', optimize=True)
             else:
                 img.save(filepath, format='JPEG', quality=80, optimize=True)
-            saved_via_pillow = True
         except Exception as e:
-            print(f"Pillow compression failed, falling back to raw save: {e}")
-            file.seek(0)
-            
-        if not saved_via_pillow:
-            file.save(filepath)
+            print(f"Pillow image validation/processing failed: {e}")
+            return jsonify({"success": False, "message": "ไฟล์รูปภาพไม่ถูกต้องหรือชำรุด กรุณาอัปโหลดรูปภาพที่เป็นมาตรฐาน (PNG, JPG, JPEG, GIF, WebP)"}), 400
             
         image_url = f"/uploads/activities/{filename}"
     else:
