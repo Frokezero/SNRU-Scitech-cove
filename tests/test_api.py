@@ -5,14 +5,20 @@ from app import app, db_save_user
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
-    # Ensure test user exists
-    test_user = {
-        "name": "Test Admin",
-        "role": "admin",
-        "username": "test_admin",
-        "password": "hashed_password_here" 
-    }
-    # For a real test, we would mock db_get_user or insert a test user into the SQLite DB
+    
+    # Ensure database is initialized and has a test admin user
+    from database import init_db, get_db_connection
+    from werkzeug.security import generate_password_hash
+    init_db()
+    
+    conn = get_db_connection()
+    conn.execute('''
+        INSERT OR REPLACE INTO users (username, password, name, email, major, role)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', ('admin', generate_password_hash('password'), 'Test Admin', 'admin@example.com', 'CS', 'admin'))
+    conn.commit()
+    conn.close()
+    
     with app.test_client() as client:
         yield client
 
