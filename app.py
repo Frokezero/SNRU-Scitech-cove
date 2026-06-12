@@ -3102,13 +3102,20 @@ def process_student_checkin():
     if not user or user.get('role') != 'student':
         return jsonify({"success": False, "message": "เฉพาะนักศึกษาเท่านั้นที่สามารถเช็คอินเข้าร่วมกิจกรรมได้"}), 403
         
-    data = request.json
-    token = data.get('token')
-    student_lat = data.get('latitude')
-    student_lng = data.get('longitude')
+    # We are receiving multipart/form-data
+    token = request.form.get('token')
+    student_lat = request.form.get('latitude')
+    student_lng = request.form.get('longitude')
     
     if not token:
         return jsonify({"success": False, "message": "ไม่พบรหัส Token"}), 400
+        
+    if 'file' not in request.files:
+        return jsonify({"success": False, "message": "กรุณาถ่ายภาพหรือเลือกรูปภาพเพื่อยืนยันตัวตนหน้างาน"}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"success": False, "message": "กรุณาถ่ายภาพหรือเลือกรูปภาพเพื่อยืนยันตัวตนหน้างาน"}), 400
         
     try:
         decoded_bytes = base64.urlsafe_b64decode(token.encode('utf-8'))
@@ -3161,6 +3168,64 @@ def process_student_checkin():
         if p.get('event_id') == event_id:
             return jsonify({"success": False, "message": "คุณทำการเช็คอินหรือส่งผลงานสำหรับกิจกรรมนี้เรียบร้อยแล้ว"}), 400
             
+    # Save photo to uploads
+    if file and allowed_file(file.filename):
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        raw_filename = f"checkin_{username}_{event_id}_{uuid.uuid4().hex[:8]}.{ext}"
+        filename = secure_filename(raw_filename)
+        filepath = os.path.join(ACTIVITIES_UPLOAD_FOLDER, filename)
+        
+        # Verify the path is still within the upload folder (prevent path traversal)
+        if not os.path.abspath(filepath).startswith(os.path.abspath(ACTIVITIES_UPLOAD_FOLDER)):
+            return jsonify({"success": False, "message": "Invalid file path"}), 400
+            
+        # 5MB size limit check
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        if file_size > 5 * 1024 * 1024:
+            return jsonify({"success": False, "message": "ไฟล์รูปภาพมีขนาดใหญ่เกินไป (จำกัด 5MB)"}), 400
+            
+        saved_via_pillow = False
+        try:
+            from PIL import Image
+            img = Image.open(file)
+            
+            # Convert RGBA/LA or Palette mode to RGB for standard format
+            if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                img = img.convert('RGB')
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Resize if larger than 1200px width/height while maintaining aspect ratio
+            max_size = 1200
+            width, height = img.size
+            if width > max_size or height > max_size:
+                if width > height:
+                    new_width = max_size
+                    new_height = int(height * (max_size / width))
+                else:
+                    new_height = max_size
+                    new_width = int(width * (max_size / height))
+                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Save optimized image based on file extension
+            if ext == 'png':
+                img.save(filepath, format='PNG', optimize=True)
+            else:
+                img.save(filepath, format='JPEG', quality=80, optimize=True)
+            saved_via_pillow = True
+        except Exception as e:
+            print(f"Pillow compression failed, falling back to raw save: {e}")
+            file.seek(0)
+            
+        if not saved_via_pillow:
+            file.save(filepath)
+            
+        image_url = f"/uploads/activities/{filename}"
+    else:
+        return jsonify({"success": False, "message": "รูปแบบไฟล์รูปภาพไม่ถูกต้อง อนุญาตเฉพาะ png, jpg, jpeg, gif, webp"}), 400
+            
     record = {
         "id": "part_" + uuid.uuid4().hex[:10],
         "username": username,
@@ -3171,7 +3236,7 @@ def process_student_checkin():
         "event_date": event.get('date'),
         "score": int(event.get('score', 0)),
         "timestamp": datetime.now().isoformat(),
-        "image_url": "/static/images/qr_checkin.png",
+        "image_url": image_url,
         "status": "approved"
     }
     db_save_participation(record)
