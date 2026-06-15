@@ -15,7 +15,7 @@ def client():
     conn.execute('''
         INSERT OR REPLACE INTO users (username, password, name, email, major, role)
         VALUES (?, ?, ?, ?, ?, ?)
-    ''', ('admin', generate_password_hash('password'), 'Test Admin', 'admin@example.com', 'CS', 'admin'))
+    ''', ('admin', generate_password_hash('password'), 'Test Admin', 'admin@example.com', 'สาขาวิชาวิทยาการคอมพิวเตอร์', 'admin'))
     conn.commit()
     conn.close()
     
