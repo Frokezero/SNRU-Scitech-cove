@@ -904,60 +904,76 @@ def check_and_send_event_notifications():
                 if key in sent_history:
                     continue
                     
-                # Fetch confirmed registrations for this event
+                # 1. Fetch confirmed registrations for this event to identify registered users
                 regs = conn.execute(
                     "SELECT username FROM registrations WHERE event_id = ? AND status = 'confirmed'", 
                     (e['id'],)
                 ).fetchall()
+                registered_usernames = {r['username'] for r in regs}
                 
-                if regs:
-                    usernames = [r['username'] for r in regs]
-                    # Fetch line_ids of these users
-                    placeholders = ','.join('?' for _ in usernames)
-                    users = conn.execute(
-                        f"SELECT username, line_id, name FROM users WHERE username IN ({placeholders}) AND line_id != '' AND line_id IS NOT NULL",
-                        usernames
-                    ).fetchall()
+                # 2. Fetch all users who have linked a LINE ID
+                users = conn.execute(
+                    "SELECT username, line_id, name FROM users WHERE line_id != '' AND line_id IS NOT NULL"
+                ).fetchall()
+                
+                for u in users:
+                    line_id = u['line_id']
+                    name = u['name'] or u['username']
+                    is_registered = u['username'] in registered_usernames
                     
-                    for u in users:
-                        line_id = u['line_id']
-                        name = u['name'] or u['username']
-                        
-                        # Draft beautiful message
-                        location = e.get('location') or 'ยังไม่ระบุสถานที่'
-                        date_str = e.get('date') or ''
-                        
-                        if notif_type == "tomorrow":
-                            msg = make_premium_notification_flex(
-                                title="พรุ่งนี้เจอกันนะครับ! 🔔",
-                                subtitle="แจ้งเตือนล่วงหน้า 1 วันสำหรับกิจกรรมที่คุณได้จองไว้",
-                                items=[
-                                    ("ผู้รับ", name),
-                                    ("กิจกรรม", e['title']),
-                                    ("วันจัดงาน", date_str),
-                                    ("สถานที่", location)
-                                ],
-                                accent_color="#0ea5e9",
-                                button_text="ดูข้อมูลโปรไฟล์และกิจกรรม",
-                                button_url=f"{get_ngrok_url()}/profile"
-                            )
-                        else:  # today
-                            msg = make_premium_notification_flex(
-                                title="เริ่มต้นวันนี้แล้วนะ! 📢",
-                                subtitle="แจ้งเตือนวันจัดกิจกรรมที่คุณได้จองสิทธิ์ไว้",
-                                items=[
-                                    ("ผู้รับ", name),
-                                    ("กิจกรรม", e['title']),
-                                    ("วันจัดงาน", date_str),
-                                    ("สถานที่", location)
-                                ],
-                                accent_color="#f59e0b",
-                                button_text="ดูข้อมูลโปรไฟล์และกิจกรรม",
-                                button_url=f"{get_ngrok_url()}/profile"
-                            )
+                    location = e.get('location') or 'ยังไม่ระบุสถานที่'
+                    date_str = e.get('date') or ''
+                    
+                    # 3. Draft customized message depending on registration status
+                    if notif_type == "tomorrow":
+                        if is_registered:
+                            title = "พรุ่งนี้เจอกันนะครับ! 🔔"
+                            subtitle = "แจ้งเตือนล่วงหน้า 1 วันสำหรับกิจกรรมที่คุณได้จองไว้"
+                            accent_color = "#0ea5e9"  # Sky blue
+                        else:
+                            title = "มีกิจกรรมวันพรุ่งนี้! 📢"
+                            subtitle = "ประชาสัมพันธ์กิจกรรมที่กำลังจะจัดขึ้นในวันพรุ่งนี้"
+                            accent_color = "#10b981"  # Emerald green (invitation)
                             
-                        # Send LINE push notification
-                        send_line_notification(line_id, msg)
+                        msg = make_premium_notification_flex(
+                            title=title,
+                            subtitle=subtitle,
+                            items=[
+                                ("ผู้รับ", name),
+                                ("กิจกรรม", e['title']),
+                                ("วันจัดงาน", date_str),
+                                ("สถานที่", location)
+                            ],
+                            accent_color=accent_color,
+                            button_text="ดูข้อมูลโปรไฟล์และกิจกรรม",
+                            button_url=f"{get_ngrok_url()}/profile"
+                        )
+                    else:  # today
+                        if is_registered:
+                            title = "เริ่มต้นวันนี้แล้วนะ! 📢"
+                            subtitle = "แจ้งเตือนวันจัดกิจกรรมที่คุณได้จองสิทธิ์ไว้"
+                            accent_color = "#f59e0b"  # Amber
+                        else:
+                            title = "วันนี้มีกิจกรรมนะ! 🌟"
+                            subtitle = "ประชาสัมพันธ์กิจกรรมที่กำลังจัดขึ้นในวันนี้"
+                            accent_color = "#8b5cf6"  # Purple (invitation)
+                            
+                        msg = make_premium_notification_flex(
+                            title=title,
+                            subtitle=subtitle,
+                            items=[
+                                ("ผู้รับ", name),
+                                ("กิจกรรม", e['title']),
+                                ("วันจัดงาน", date_str),
+                                ("สถานที่", location)
+                            ],
+                            accent_color=accent_color,
+                            button_text="ดูข้อมูลโปรไฟล์และกิจกรรม",
+                            button_url=f"{get_ngrok_url()}/profile"
+                        )
+                        
+                    # Send LINE push notification
+                    send_line_notification(line_id, msg)
                         
                 # Mark as sent
                 sent_history[key] = today_str
