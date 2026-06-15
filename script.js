@@ -137,10 +137,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let parsedEventsList = [];
     let currentView = 'grid';
     let searchTimeout = null;
+    let dynamicMajors = [];
 
     // ===== LOAD EVENTS =====
     async function loadEvents() {
         try {
+            try {
+                const majorsRes = await fetch('/api/majors');
+                if (majorsRes.ok) {
+                    dynamicMajors = await majorsRes.json();
+                }
+            } catch (err) {
+                console.error("Failed to load majors:", err);
+            }
+
             const response = await fetch('/api/events');
             const eventsDataRaw = await response.json();
             const eventsData = Array.isArray(eventsDataRaw) ? eventsDataRaw : (eventsDataRaw.events || []);
@@ -241,8 +251,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function buildBranchFilters() {
         branchFiltersContainer.innerHTML = '';
         
-        // 1. Standard branches to always show (from users.json)
-        const standardBranches = [
+        // 1. Standard branches loaded dynamically (fallback if empty)
+        const standardBranches = dynamicMajors.length > 0 ? dynamicMajors : [
             'สาขาวิชาเคมี', 'สาขาวิชาฟิสิกส์', 'สาขาวิชาชีววิทยา',
             'สาขาวิชาคณิตศาสตร์', 'สาขาวิชาสถิติ', 'สาขาวิชาวิทยาการคอมพิวเตอร์', 
             'สาขาวิชาเทคโนโลยีสารสนเทศ', 'สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม', 

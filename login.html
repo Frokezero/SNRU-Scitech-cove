@@ -421,16 +421,6 @@
                         <i class="fa-solid fa-building-columns input-icon"></i>
                         <select id="reg-major">
                             <option value="">-- เลือกสาขาวิชา --</option>
-                            <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
-                            <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
-                            <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
-                            <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
-                            <option value="สาขาวิชาสถิติ">สาขาวิชาสถิติ</option>
-                            <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
-                            <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ</option>
-                            <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
-                            <option value="สาขาวิชาคหกรรมศาสตร์">สาขาวิชาคหกรรมศาสตร์</option>
-                            <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
                         </select>
                     </div>
                 </div>
@@ -626,6 +616,27 @@
                 }
             }
         }).catch(() => {});
+
+        // Fetch and populate majors dynamically
+        async function loadMajors() {
+            try {
+                const res = await fetch('/api/majors');
+                const majors = await res.json();
+                const select = document.getElementById('reg-major');
+                if (select) {
+                    select.innerHTML = '<option value="">-- เลือกสาขาวิชา --</option>';
+                    majors.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load majors:', e);
+            }
+        }
+        loadMajors();
     </script>
 </body>
 </html>

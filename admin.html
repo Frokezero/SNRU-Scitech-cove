@@ -663,16 +663,6 @@
                             <option value="all">แสดงทั้งหมด</option>
                             <option value="คณะวิทยาศาสตร์และเทคโนโลยี">คณะวิทยาศาสตร์และเทคโนโลยี</option>
                             <option value="สโมสรนักศึกษา">สโมสรนักศึกษา</option>
-                            <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
-                            <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
-                            <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
-                            <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
-                            <option value="สาขาวิชาสถิติ">สาขาวิชาสถิติ</option>
-                            <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
-                            <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ</option>
-                            <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
-                            <option value="สาขาวิชาคหกรรมศาสตร์">สาขาวิชาคหกรรมศาสตร์</option>
-                            <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
                         </select>
                     </div>
                 </div>
@@ -835,16 +825,6 @@
                     <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase;">กรองสาขาวิชา:</label>
                     <select id="report-major-filter" onchange="reportPage=1; fetchReportData()" style="margin-top: 5px;">
                         <option value="all">ทุกสาขาวิชา</option>
-                        <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
-                        <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
-                        <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
-                        <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
-                        <option value="สาขาวิชาสถิติ">สาขาวิชาสถิติ</option>
-                        <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
-                        <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ</option>
-                        <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
-                        <option value="สาขาวิชาคหกรรมศาสตร์">สาขาวิชาคหกรรมศาสตร์</option>
-                        <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
                     </select>
                 </div>
                 <div style="flex: 1;">
@@ -908,16 +888,6 @@
                     <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase;">สาขาวิชา:</label>
                     <select id="attendance-major-select" onchange="fetchAttendanceReport()" style="width: 100%; margin-top: 5px;">
                         <option value="all">ทุกสาขาวิชา</option>
-                        <option value="สาขาวิชาเคมี">สาขาวิชาเคมี</option>
-                        <option value="สาขาวิชาฟิสิกส์">สาขาวิชาฟิสิกส์</option>
-                        <option value="สาขาวิชาชีววิทยา">สาขาวิชาชีววิทยา</option>
-                        <option value="สาขาวิชาคณิตศาสตร์">สาขาวิชาคณิตศาสตร์</option>
-                        <option value="สาขาวิชาสถิติ">สาขาวิชาสถิติ</option>
-                        <option value="สาขาวิชาวิทยาการคอมพิวเตอร์">สาขาวิชาวิทยาการคอมพิวเตอร์</option>
-                        <option value="สาขาวิชาเทคโนโลยีสารสนเทศ">สาขาวิชาเทคโนโลยีสารสนเทศ</option>
-                        <option value="สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม">สาขาวิชาวิทยาศาสตร์สิ่งแวดล้อม</option>
-                        <option value="สาขาวิชาคหกรรมศาสตร์">สาขาวิชาคหกรรมศาสตร์</option>
-                        <option value="สาขาวิชาสาธารณสุขศาสตร์">สาขาวิชาสาธารณสุขศาสตร์</option>
                     </select>
                 </div>
                 <div style="flex: 1.5; min-width: 200px;">
@@ -1221,8 +1191,73 @@
         let allStudentsForReport = [];
         const thaiMonthsAbbr = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
+        async function loadMajors() {
+            try {
+                const res = await fetch('/api/majors');
+                const majors = await res.json();
+
+                // 1. Populate admin-branch-filter
+                const branchFilter = document.getElementById('admin-branch-filter');
+                if (branchFilter) {
+                    branchFilter.innerHTML = `
+                        <option value="all">แสดงทั้งหมด</option>
+                        <option value="คณะวิทยาศาสตร์และเทคโนโลยี">คณะวิทยาศาสตร์และเทคโนโลยี</option>
+                        <option value="สโมสรนักศึกษา">สโมสรนักศึกษา</option>
+                    `;
+                    majors.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        branchFilter.appendChild(opt);
+                    });
+                }
+
+                // 2. Populate event-owner
+                const ownerSelect = document.getElementById('event-owner');
+                if (ownerSelect) {
+                    ownerSelect.innerHTML = `
+                        <option value="คณะวิทยาศาสตร์และเทคโนโลยี">คณะวิทยาศาสตร์และเทคโนโลยี</option>
+                        <option value="สโมสรนักศึกษา">สโมสรนักศึกษา</option>
+                    `;
+                    majors.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        ownerSelect.appendChild(opt);
+                    });
+                }
+
+                // 3. Populate report-major-filter
+                const reportFilter = document.getElementById('report-major-filter');
+                if (reportFilter) {
+                    reportFilter.innerHTML = '<option value="all">ทุกสาขาวิชา</option>';
+                    majors.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        reportFilter.appendChild(opt);
+                    });
+                }
+
+                // 4. Populate attendance-major-select
+                const attendanceFilter = document.getElementById('attendance-major-select');
+                if (attendanceFilter) {
+                    attendanceFilter.innerHTML = '<option value="all">ทุกสาขาวิชา</option>';
+                    majors.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        attendanceFilter.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load majors dynamically:', e);
+            }
+        }
+
         // --- Core Logic ---
         async function checkLogin() {
+            await loadMajors();
             try {
                 const res = await fetch('/api/me');
                 if (res.ok) {

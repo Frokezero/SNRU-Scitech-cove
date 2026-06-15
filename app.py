@@ -1102,7 +1102,7 @@ def portfolio():
 def update_activity():
     # 1. Public Routes: Fully accessible without session
     public_paths = [
-        '/', '/login', '/api/login', '/api/register', '/register', 
+        '/', '/login', '/api/login', '/api/register', '/register', '/api/majors', 
         '/api/carousel', '/api/events', '/api/leaderboard', '/theme-loader.js',
         '/style.css', '/script.js', '/favicon.ico', '/api/line/webhook'
     ]
@@ -2977,6 +2977,25 @@ def get_leaderboard():
             
     leaderboard.sort(key=lambda x: x['score'], reverse=True)
     return jsonify(leaderboard[:10]) # Return Top 10
+
+# --- Majors API ---
+@app.route('/api/majors', methods=['GET'])
+def get_majors():
+    try:
+        conn = get_db_connection()
+        rows = conn.execute("""
+            SELECT DISTINCT major 
+            FROM users 
+            WHERE major IS NOT NULL 
+              AND major != '' 
+              AND major NOT IN ('คณะวิทยาศาสตร์และเทคโนโลยี', 'สโมสรนักศึกษา', 'แอดมินส่วนกลาง')
+        """).fetchall()
+        conn.close()
+        majors = sorted([r['major'] for r in rows if r['major']])
+        return jsonify(majors)
+    except Exception as e:
+        print(f"Error getting majors: {e}")
+        return jsonify([])
 
 # --- Notifications API ---
 @app.route('/api/notifications', methods=['GET'])
