@@ -431,8 +431,6 @@ session_lock = threading.RLock()
 ACTIVE_SESSIONS = {} # {username: last_activity_timestamp}
 SESSION_TIMEOUT = 3600 # 1 hour idle timeout
 
-login_attempts_lock = threading.RLock()
-login_attempts = {} # {ip: {"count": X, "lockout_until": Y}}
 
 def cleanup_sessions():
     now = time.time()
@@ -534,7 +532,12 @@ def db_get_event_registrations(event_id):
     if not event_id:
         return []
     conn = get_db_connection()
-    rows = conn.execute('SELECT * FROM registrations WHERE event_id = ?', (event_id,)).fetchall()
+    rows = conn.execute('''
+        SELECT r.*, p.id as participation_id, p.image_url as uploaded_image, p.status as participation_status
+        FROM registrations r
+        LEFT JOIN participations p ON r.event_id = p.event_id AND r.username = p.username
+        WHERE r.event_id = ?
+    ''', (event_id,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
@@ -560,9 +563,15 @@ def db_update_registration_status(reg_id, status):
     with data_lock:
         conn = get_db_connection()
         conn.execute('UPDATE registrations SET status=? WHERE id=?', (status, reg_id))
+        if status in ['cancelled', 'not_participated']:
+            # Fetch registration details first to get event_id and username
+            reg = conn.execute('SELECT event_id, username FROM registrations WHERE id=?', (reg_id,)).fetchone()
+            if reg:
+                conn.execute('DELETE FROM participations WHERE event_id=? AND username=?', (reg['event_id'], reg['username']))
         conn.commit()
         conn.close()
         _cache["registrations"]["data"] = None # Invalidate cache
+        _cache["participations"]["data"] = None # Invalidate cache
 
 
 def load_carousel():
@@ -633,7 +642,7 @@ def parse_thai_date_to_comparable(date_str):
 
 def process_auto_open(events):
     today = datetime.now().date()
-    modified = False
+    modified_events = []
     log_entries = []
     
     for e in events:
@@ -642,7 +651,7 @@ def process_auto_open(events):
             if event_date:
                 if event_date <= today:
                     e['registration_open'] = True
-                    modified = True
+                    modified_events.append(e)
                     log_entries.append(f"SUCCESS: Opened '{e.get('title')}' (Event Date: {event_date}, Today: {today})")
             else:
                 # Log only if date is not empty
@@ -656,7 +665,7 @@ def process_auto_open(events):
                     f.write(f"[{datetime.now().isoformat()}] {entry}\n")
         except: pass
         
-    return modified
+    return modified_events
 
 def add_notification(username, title, message, type='info'):
     # Safe no-op as requested by user to remove the notification system
@@ -775,6 +784,30 @@ def db_update_event(e):
         conn.commit()
         conn.close()
         _cache["events"]["data"] = None # Invalidate cache
+
+def db_update_events_batch(events_to_update):
+    if not events_to_update:
+        return
+    with data_lock:
+        conn = get_db_connection()
+        for e in events_to_update:
+            conn.execute('''
+                UPDATE events SET
+                    title=?, date=?, category=?, location=?, owner=?, description=?,
+                    registration_open=?, max_participants=?, score=?, hidden=?, status=?,
+                    registration_start=?, registration_end=?, latitude=?, longitude=?
+                WHERE id=?
+            ''', (
+                e.get('title', ''), e.get('date', ''), e.get('category', ''),
+                e.get('location', ''), e.get('owner', ''), e.get('description', ''),
+                1 if e.get('registration_open') else 0, int(e.get('max_participants', 0)),
+                int(e.get('score', 0)), 1 if e.get('hidden') else 0, e.get('status', 'รอการดำเนินการ'),
+                e.get('registration_start', ''), e.get('registration_end', ''),
+                safe_float(e.get('latitude'), 17.18994), safe_float(e.get('longitude'), 104.09153), e.get('id')
+            ))
+        conn.commit()
+        conn.close()
+        _cache["events"]["data"] = None # Invalidate cache once for the whole batch
 
 def db_delete_event(event_id):
     with data_lock:
@@ -1131,53 +1164,19 @@ def login():
     username = data.get('username')
     password = data.get('password')
     
-    ip = request.remote_addr
-    now = time.time()
-    
-    with login_attempts_lock:
-        attempt = login_attempts.get(ip, {"count": 0, "lockout_until": 0})
-        if attempt["lockout_until"] > now:
-            remaining = int(attempt["lockout_until"] - now)
-            minutes = remaining // 60
-            seconds = remaining % 60
-            return jsonify({
-                "success": False, 
-                "message": f"คุณถูกล็อกการเข้าใช้งานชั่วคราวเนื่องจากรหัสผ่านผิดเกินกำหนด โปรดลองใหม่ในอีก {minutes} นาที {seconds} วินาที"
-            }), 429
-            
     users = load_users()
     if username in users and check_password_hash(users[username]['password'], password):
         user_role = users[username].get('role')
         
-        with login_attempts_lock:
-            login_attempts.pop(ip, None)
-            
         session['username'] = username
         with session_lock:
             ACTIVE_SESSIONS[username] = time.time()
         return jsonify({"success": True, "user": {"name": users[username]['name'], "role": user_role}})
         
-    with login_attempts_lock:
-        attempt = login_attempts.get(ip, {"count": 0, "lockout_until": 0})
-        if attempt["lockout_until"] > 0 and attempt["lockout_until"] <= now:
-            attempt["count"] = 0
-            attempt["lockout_until"] = 0
-            
-        attempt["count"] += 1
-        if attempt["count"] >= 5:
-            attempt["lockout_until"] = now + 15 * 60
-            login_attempts[ip] = attempt
-            return jsonify({
-                "success": False, 
-                "message": "เข้าสู่ระบบล้มเหลวครบ 5 ครั้ง บัญชี/IP นี้ถูกระงับชั่วคราว 15 นาที"
-            }), 429
-        else:
-            login_attempts[ip] = attempt
-            remaining_attempts = 5 - attempt["count"]
-            return jsonify({
-                "success": False, 
-                "message": f"Username หรือ Password ไม่ถูกต้อง (สามารถลองใหม่ได้อีก {remaining_attempts} ครั้ง)"
-            }), 401
+    return jsonify({
+        "success": False, 
+        "message": "Username หรือ Password ไม่ถูกต้อง"
+    }), 401
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
@@ -1608,9 +1607,9 @@ def get_events():
     regs = load_registrations()
     
     # Auto-open registration logic
-    if process_auto_open(events):
-        for e in events:
-            db_update_event(e)
+    modified_events = process_auto_open(events)
+    if modified_events:
+        db_update_events_batch(modified_events)
 
     # Calculate registered count for each event
     reg_counts = {}
@@ -1840,9 +1839,9 @@ def register_event(event_id):
     with data_lock:
         events = load_events()
         # Auto-open check before processing registration
-        if process_auto_open(events):
-            for e in events:
-                db_update_event(e)
+        modified_events = process_auto_open(events)
+        if modified_events:
+            db_update_events_batch(modified_events)
             
         event = next((e for e in events if e['id'] == event_id), None)
         if not event:
@@ -2557,6 +2556,12 @@ def update_status_bulk():
                         event_id, event_title, event.get('date', ''), final_score,
                         datetime.now().isoformat(), None, new_status
                     ))
+                
+                # Also update registration status to 'confirmed' if approved, or 'pending' if rejected
+                if new_status == 'approved':
+                    c.execute("UPDATE registrations SET status='confirmed' WHERE event_id = ? AND username = ?", (event_id, target_u))
+                elif new_status == 'rejected':
+                    c.execute("UPDATE registrations SET status='pending' WHERE event_id = ? AND username = ?", (event_id, target_u))
                     
                 # Email Notification
                 student_email = users[target_u].get('email')
@@ -2649,6 +2654,46 @@ def update_status_bulk():
         finally:
             conn.close()
     return jsonify({"success": True, "message": "อัปเดตเรียบร้อยแล้ว"})
+
+@app.route('/api/admin/registrations/status-bulk', methods=['POST'])
+@require_role('admin', 'major')
+def registrations_status_bulk():
+    username = session.get('username')
+    users = load_users()
+    current_user = users[username]
+    role = current_user.get('role')
+    
+    data = request.json
+    event_id = data.get('event_id')
+    usernames = data.get('usernames', [])
+    new_status = data.get('status') # 'confirmed', 'cancelled', or 'pending'
+    
+    if not event_id or not usernames or not new_status:
+        return jsonify({"success": False, "message": "ข้อมูลไม่ครบถ้วน"}), 400
+        
+    with data_lock:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('BEGIN TRANSACTION')
+        try:
+            for target_u in usernames:
+                if target_u not in users: continue
+                if role == 'major' and users[target_u].get('major') != current_user.get('name'):
+                    continue
+                c.execute("UPDATE registrations SET status = ? WHERE event_id = ? AND username = ?", (new_status, event_id, target_u))
+                
+                # If a registration is cancelled or not_participated, we also cancel/reject any corresponding participation record
+                if new_status in ['cancelled', 'not_participated']:
+                    c.execute("DELETE FROM participations WHERE event_id = ? AND username = ?", (event_id, target_u))
+            conn.commit()
+            _cache["registrations"]["data"] = None
+            _cache["participations"]["data"] = None
+            return jsonify({"success": True, "message": "อัปเดตสถานะการจองเรียบร้อยแล้ว"})
+        except Exception as e:
+            conn.rollback()
+            return jsonify({"success": False, "message": str(e)}), 500
+        finally:
+            conn.close()
 
 @app.route('/api/admin/reports/students', methods=['GET'])
 @require_role('admin', 'major')
@@ -3109,6 +3154,11 @@ def get_event_checkin_token(event_id):
 def student_checkin_page():
     username = session.get('username')
     if not username:
+        token = request.args.get('token', '')
+        if token:
+            import urllib.parse
+            next_url = f"/checkin?token={urllib.parse.quote_plus(token)}"
+            return redirect(f"/login?next={urllib.parse.quote_plus(next_url)}")
         return redirect('/login')
     return send_from_directory('.', 'checkin.html')
 
@@ -3130,12 +3180,7 @@ def process_student_checkin():
     if not token:
         return jsonify({"success": False, "message": "ไม่พบรหัส Token"}), 400
         
-    if 'file' not in request.files:
-        return jsonify({"success": False, "message": "กรุณาถ่ายภาพหรือเลือกรูปภาพเพื่อยืนยันตัวตนหน้างาน"}), 400
-        
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"success": False, "message": "กรุณาถ่ายภาพหรือเลือกรูปภาพเพื่อยืนยันตัวตนหน้างาน"}), 400
+    file = request.files.get('file')
         
     try:
         decoded_bytes = base64.urlsafe_b64decode(token.encode('utf-8'))
@@ -3172,24 +3217,19 @@ def process_student_checkin():
     event_lat = safe_float(event.get('latitude'), 17.18994)
     event_lng = safe_float(event.get('longitude'), 104.09153)
     
-    if event_lat != 0.0 and event_lng != 0.0:
-        if student_lat is None or student_lng is None:
-            return jsonify({"success": False, "message": "ระบบต้องการพิกัด GPS เพื่อยืนยันว่าคุณเข้าร่วมกิจกรรมจริง กรุณาอนุญาตสิทธิ์เข้าถึงพิกัดบนอุปกรณ์ของคุณ"}), 400
-            
-        try:
-            dist = haversine_distance(float(student_lat), float(student_lng), float(event_lat), float(event_lng))
-            if dist > 500.0:
-                return jsonify({"success": False, "message": f"คุณไม่ได้อยู่ในสถานที่จัดกิจกรรม (พิกัดปัจจุบันของคุณห่างจากจุดจัดกิจกรรม {dist:.1f} เมตร เกินกำหนด 500 เมตร)"}), 400
-        except Exception as e:
-            return jsonify({"success": False, "message": f"เกิดข้อผิดพลาดในการตรวจสอบพิกัด: {str(e)}"}), 400
+    # GPS verification is bypassed (scan and check in immediately)
             
     user_parts = db_get_user_participations(username)
     for p in user_parts:
         if p.get('event_id') == event_id:
             return jsonify({"success": False, "message": "คุณทำการเช็คอินหรือส่งผลงานสำหรับกิจกรรมนี้เรียบร้อยแล้ว"}), 400
             
-    # Save photo to uploads
-    if file and allowed_file(file.filename):
+    # Save photo to uploads - MANDATORY photo upload requirement
+    if not file or file.filename == '':
+        return jsonify({"success": False, "message": "กรุณาแนบหรือถ่ายภาพหลักฐานยืนยันการเข้าร่วมกิจกรรมหน้างาน"}), 400
+        
+    image_url = None
+    if allowed_file(file.filename):
         ext = file.filename.rsplit('.', 1)[1].lower()
         raw_filename = f"checkin_{username}_{event_id}_{uuid.uuid4().hex[:8]}.{ext}"
         filename = secure_filename(raw_filename)
@@ -3241,7 +3281,7 @@ def process_student_checkin():
         image_url = f"/uploads/activities/{filename}"
     else:
         return jsonify({"success": False, "message": "รูปแบบไฟล์รูปภาพไม่ถูกต้อง อนุญาตเฉพาะ png, jpg, jpeg, gif, webp"}), 400
-            
+        
     record = {
         "id": "part_" + uuid.uuid4().hex[:10],
         "username": username,
@@ -3253,44 +3293,44 @@ def process_student_checkin():
         "score": int(event.get('score', 0)),
         "timestamp": datetime.now().isoformat(),
         "image_url": image_url,
-        "status": "approved"
+        "status": "pending"  # Needs admin review
     }
     db_save_participation(record)
     
     # Add in-app Notification
-    add_notification(username, "เช็คอินเข้าร่วมกิจกรรมสำเร็จ!", f"คุณได้เช็คอินกิจกรรม {event.get('title')} และได้รับ {event.get('score', 0)} คะแนนเรียบร้อยแล้วครับ", "success")
+    add_notification(username, "ส่งหลักฐานเช็คอินสำเร็จ!", f"ส่งรูปภาพหลักฐานเช็คอินสำหรับกิจกรรม {event.get('title')} เรียบร้อยแล้ว รอดำเนินการอนุมัติคะแนนสะสม", "info")
     
     # Send LINE Notification to Student
     student_line_id = user.get('line_id')
     if student_line_id:
         msg = make_premium_notification_flex(
-            title="เช็คอินเข้าร่วมกิจกรรมสำเร็จ! ✅",
-            subtitle="ชั่วโมงคะแนนถูกสะสมเข้าระบบเรียบร้อยแล้วครับ",
+            title="ได้รับหลักฐานเช็คอินแล้ว 📋",
+            subtitle="เจ้าหน้าที่กำลังดำเนินการตรวจสอบภาพถ่ายหลักฐาน",
             items=[
                 ("ผู้เช็คอิน", user['name']),
                 ("กิจกรรม", event.get('title')),
                 ("วันที่จัด", event.get('date', '')),
-                ("สถานที่", event.get('location', 'ยังไม่ระบุ')),
-                ("คะแนนสะสม", f"+{event.get('score', 0)} คะแนนสะสม ⭐")
+                ("สถานะ", "รอตรวจสอบ (Pending) ⏳"),
+                ("คะแนนที่รออนุมัติ", f"+{event.get('score', 0)} คะแนนสะสม ⭐")
             ],
-            accent_color="#10b981",
-            button_text="ดูแดชบอร์ด/คะแนนของฉัน",
+            accent_color="#38bdf8",
+            button_text="ดูประวัติการเช็คอิน",
             button_url=f"{get_ngrok_url()}/profile"
         )
         send_line_notification(student_line_id, msg)
     
     student_email = user.get('email')
     if student_email:
-        subject = f"✅ เช็คอินสำเร็จ: {event.get('title')}"
+        subject = f"📋 ได้รับรูปภาพหลักฐานเช็คอิน: {event.get('title')}"
         body = f"""
         <div style="font-family:Kanit,sans-serif;max-width:500px;margin:auto;padding:24px;background:#f8fafc;border-radius:12px;">
-            <h2 style="color:#10b981;">✅ เช็คอินและสะสมคะแนนสำเร็จ!</h2>
+            <h2 style="color:#0284c7;">📋 ได้รับรูปภาพหลักฐานเช็คอินกิจกรรมแล้ว</h2>
             <p>สวัสดีคุณ <strong>{user['name']}</strong></p>
-            <div style="background:white;padding:16px;border-radius:8px;border-left:4px solid #10b981;margin:16px 0;">
+            <div style="background:white;padding:16px;border-radius:8px;border-left:4px solid #0284c7;margin:16px 0;">
                 <p><strong>📅 กิจกรรม:</strong> {event.get('title')}</p>
                 <p><strong>🗓️ วันที่:</strong> {event.get('date')}</p>
-                <p><strong>📍 สถานที่:</strong> {event.get('location', 'ยังไม่ระบุ')}</p>
-                <p><strong>⭐️ คะแนนที่ได้รับ:</strong> {event.get('score', 0)} คะแนน</p>
+                <p><strong>⏳ สถานะ:</strong> รอตรวจสอบภาพถ่ายหลักฐาน (Pending)</p>
+                <p><strong>⭐️ คะแนนที่จะได้รับเมื่ออนุมัติสำเร็จ:</strong> {event.get('score', 0)} คะแนน</p>
             </div>
             <p style="color:#64748b;font-size:13px;">ระบบปฏิทินกิจกรรม คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏสกลนคร</p>
         </div>"""
@@ -3298,7 +3338,7 @@ def process_student_checkin():
         
     return jsonify({
         "success": True, 
-        "message": "เช็คอินและสะสมแต้มชั่วโมงกิจกรรมสำเร็จแล้ว!",
+        "message": "ส่งรูปภาพหลักฐานเช็คอินเข้าร่วมกิจกรรมสำเร็จแล้ว รอดำเนินการตรวจสอบหลักฐานเพื่ออนุมัติคะแนนสะสม",
         "event": {
             "title": event.get('title'),
             "score": event.get('score'),

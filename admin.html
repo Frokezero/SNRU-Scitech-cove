@@ -891,6 +891,17 @@
                     </select>
                 </div>
                 <div style="flex: 1.5; min-width: 200px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase;">สถานะเข้าร่วมกิจกรรม:</label>
+                    <select id="attendance-status-select" onchange="filterAttendanceTable()" style="width: 100%; margin-top: 5px; padding: 10px; border-radius: 10px; border: 1px solid var(--slate-200); font-family: inherit; font-size: 14px;">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="approved">อนุมัติแล้ว (เช็คอินสำเร็จ)</option>
+                        <option value="pending">รอตรวจสอบหลักฐาน</option>
+                        <option value="rejected">ไม่อนุมัติหลักฐาน</option>
+                        <option value="registered">จองสิทธิ์แล้ว (ยังไม่เช็คอิน)</option>
+                        <option value="not_attended">ไม่ได้เข้าร่วม</option>
+                    </select>
+                </div>
+                <div style="flex: 1.5; min-width: 200px;">
                     <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase;">ค้นหารายชื่อ/รหัส:</label>
                     <input type="text" id="attendance-search-input" placeholder="พิมพ์เพื่อค้นหา..." oninput="filterAttendanceTable()" style="width: 100%; margin-top: 5px; padding: 10px; border-radius: 10px; border: 1px solid var(--slate-200);">
                 </div>
@@ -1053,13 +1064,44 @@
                     <button class="btn btn-outline mini-btn" onclick="closeRegistrationsModal()"><i class="fa-solid fa-times"></i></button>
                 </div>
             </div>
+            <!-- Filters Bar -->
+            <div style="background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.25); margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-start; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05); text-align: left;">
+                <div style="flex: 1; min-width: 160px; display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.5px;">สถานะรูปหลักฐาน:</label>
+                    <select id="regs-upload-filter" onchange="renderRegistrationsTable()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; margin: 0;">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="uploaded">อัปโหลดแล้ว</option>
+                        <option value="not_uploaded">ยังไม่อัปโหลด</option>
+                    </select>
+                </div>
+                <div style="flex: 2; min-width: 220px; display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.5px;">ค้นหารายชื่อ / รหัสนักศึกษา:</label>
+                    <input type="text" id="regs-search-input" placeholder="พิมพ์ชื่อหรือรหัสเพื่อค้นหา..." oninput="renderRegistrationsTable()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; margin: 0;">
+                </div>
+            </div>
+            <!-- Bulk Action Control Bar -->
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--slate-50); padding:12px 20px; border-radius:12px; margin-bottom:15px; border:1px solid var(--slate-200); gap:15px; flex-wrap:wrap; text-align:left;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <label style="font-size:13px; font-weight:600; color:var(--slate-700);">กำหนดคะแนนสะสม:</label>
+                    <input type="number" id="reg-bulk-score" placeholder="คะแนน" style="width:90px; padding:6px 10px; border-radius:8px; border:1px solid var(--slate-300); font-family:inherit; font-size:13px;">
+                    <span style="font-size:11px; color:var(--slate-400);">*เว้นว่างเพื่อใช้คะแนนกิจกรรมปกติ</span>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-primary" onclick="approveBulkRegs()" style="padding:8px 16px; font-size:13px; border-radius:8px; background:linear-gradient(135deg, #10b981, #059669); box-shadow:0 4px 10px rgba(16,185,129,0.2);"><i class="fa-solid fa-circle-check"></i> ยืนยันเข้าร่วม (อนุมัติ)</button>
+                    <button class="btn btn-outline" onclick="notParticipateBulkRegs()" style="padding:8px 16px; font-size:13px; border-radius:8px; color:var(--slate-600); border-color:rgba(100,116,139,0.2);"><i class="fa-solid fa-user-slash"></i> ไม่เข้าร่วม</button>
+                    <button class="btn btn-outline" onclick="cancelBulkRegs()" style="padding:8px 16px; font-size:13px; border-radius:8px; color:var(--danger); border-color:rgba(220,38,38,0.2);"><i class="fa-solid fa-circle-xmark"></i> ยกเลิกการจอง</button>
+                </div>
+            </div>
+
             <div style="overflow-x:auto;">
                 <table class="data-table">
                     <thead><tr>
+                        <th style="width: 40px; text-align: center;"><input type="checkbox" id="select-all-regs" onclick="toggleSelectAllRegs()"></th>
                         <th>รหัสนักศึกษา</th>
                         <th>ชื่อ-นามสกุล</th>
                         <th>สาขาวิชา</th>
                         <th>วันที่จอง</th>
+                        <th style="text-align:center;">การส่งงาน</th>
                         <th style="text-align:center;">สถานะ</th>
                         <th style="text-align:center;">จัดการ</th>
                     </tr></thead>
@@ -1106,10 +1148,7 @@
             </div>
             
             <div style="background: var(--slate-50); padding: 15px; border-radius: 16px; border: 1px solid var(--slate-200); margin-bottom: 20px; text-align: left;">
-                <div id="qr-event-title" style="font-weight: 700; font-size: 16px; color: var(--slate-800); margin-bottom: 6px; line-height: 1.4;"></div>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <span id="qr-gps-status" style="font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;"></span>
-                </div>
+                <div id="qr-event-title" style="font-weight: 700; font-size: 16px; color: var(--slate-800); line-height: 1.4;"></div>
             </div>
 
             <div style="position: relative; width: 300px; height: 300px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid var(--slate-200); overflow: hidden;">
@@ -1557,19 +1596,7 @@
                     const qrImg = document.getElementById('qr-code-img');
                     qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkinURL)}`;
                     
-                    // Update GPS Status badge
-                    const gpsStatus = document.getElementById('qr-gps-status');
-                    const isGpsActive = (data.latitude !== 0.0 || data.longitude !== 0.0);
-                    
-                    if (isGpsActive) {
-                        gpsStatus.style.background = 'rgba(16, 185, 129, 0.1)';
-                        gpsStatus.style.color = '#10b981';
-                        gpsStatus.innerHTML = `<i class="fa-solid fa-location-dot"></i> พิกัด GPS: ${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)} (รัศมี 500ม.)`;
-                    } else {
-                        gpsStatus.style.background = 'rgba(100, 116, 139, 0.1)';
-                        gpsStatus.style.color = '#64748b';
-                        gpsStatus.innerHTML = `<i class="fa-solid fa-globe"></i> โหมดเช็คอินปกติ (ไม่มีการตรวจพิกัด)`;
-                    }
+
                     
                     // Reset countdown
                     qrTimeRemaining = 300;
@@ -1707,11 +1734,19 @@
 
         // --- Attendance Report Management ---
         let currentAttendanceStudents = [];
+        let currentFilteredAttendanceStudents = [];
         let currentAttendanceEventTitle = "";
 
         function openAttendanceReportModal() {
             const searchInput = document.getElementById('attendance-event-search');
             if (searchInput) searchInput.value = '';
+            
+            // Reset filters
+            const statusSelect = document.getElementById('attendance-status-select');
+            if (statusSelect) statusSelect.value = 'all';
+            const nameSearchInput = document.getElementById('attendance-search-input');
+            if (nameSearchInput) nameSearchInput.value = '';
+
             document.getElementById('attendance-report-modal').classList.add('active');
             populateAttendanceEventsDropdown();
             
@@ -1877,14 +1912,24 @@
             tbody.innerHTML = '';
             
             const searchVal = document.getElementById('attendance-search-input').value.toLowerCase().trim();
+            const statusFilter = document.getElementById('attendance-status-select') ? document.getElementById('attendance-status-select').value : 'all';
             
             let filtered = currentAttendanceStudents;
+            
+            // Filter by status
+            if (statusFilter !== 'all') {
+                filtered = filtered.filter(s => s.status === statusFilter);
+            }
+            
+            // Filter by search query
             if (searchVal) {
                 filtered = filtered.filter(s => 
                     s.username.toLowerCase().includes(searchVal) || 
                     s.name.toLowerCase().includes(searchVal)
                 );
             }
+            
+            currentFilteredAttendanceStudents = filtered;
             
             if (filtered.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--slate-400);">ไม่พบข้อมูลที่ตรงกับการค้นหา</td></tr>';
@@ -1921,7 +1966,7 @@
         }
 
         function exportAttendanceToCSV() {
-            if (currentAttendanceStudents.length === 0) {
+            if (currentFilteredAttendanceStudents.length === 0) {
                 alert('ไม่มีข้อมูลสำหรับส่งออก กรุณาเลือกกิจกรรมก่อน');
                 return;
             }
@@ -1937,7 +1982,7 @@
                 'not_attended': 'ไม่ได้เข้าร่วม'
             };
             
-            currentAttendanceStudents.forEach((s, idx) => {
+            currentFilteredAttendanceStudents.forEach((s, idx) => {
                 const label = statusLabelMap[s.status] || 'ไม่ได้เข้าร่วม';
                 const nameEscaped = `"${s.name.replace(/"/g, '""')}"`;
                 const majorEscaped = `"${(s.major || '-').replace(/"/g, '""')}"`;
@@ -1958,7 +2003,7 @@
         }
 
         function printAttendanceReport() {
-            if (currentAttendanceStudents.length === 0) {
+            if (currentFilteredAttendanceStudents.length === 0) {
                 alert('ไม่มีข้อมูลสำหรับจัดพิมพ์ กรุณาเลือกกิจกรรมก่อน');
                 return;
             }
@@ -1975,7 +2020,7 @@
             };
 
             let rowsHtml = '';
-            currentAttendanceStudents.forEach((s, idx) => {
+            currentFilteredAttendanceStudents.forEach((s, idx) => {
                 const label = statusPrintLabelMap[s.status] || 'ไม่ได้เข้าร่วม';
                 rowsHtml += `
                     <tr>
@@ -2814,6 +2859,13 @@
             currentRegEventId = eventId;
             document.getElementById('reg-modal-title').textContent = eventTitle;
             document.getElementById('registrations-modal').classList.add('active');
+            
+            // Reset Filters on modal open
+            const regsUploadFilter = document.getElementById('regs-upload-filter');
+            if (regsUploadFilter) regsUploadFilter.value = 'all';
+            const regsSearchInput = document.getElementById('regs-search-input');
+            if (regsSearchInput) regsSearchInput.value = '';
+
             await loadRegistrationsForEvent(eventId);
         }
 
@@ -2823,54 +2875,264 @@
 
         async function loadRegistrationsForEvent(eventId) {
             const tbody = document.getElementById('registrations-tbody');
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;">\u0e01\u0e33\u0e25\u0e31\u0e07\u0e42\u0e2b\u0e25\u0e14...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;">กำลังโหลด...</td></tr>';
+            
+            // Reset Select All checkbox and bulk score input
+            const selectAllCb = document.getElementById('select-all-regs');
+            if (selectAllCb) selectAllCb.checked = false;
+            const bulkScoreInput = document.getElementById('reg-bulk-score');
+            if (bulkScoreInput) bulkScoreInput.value = '';
+
             const res = await fetch(`/api/events/${eventId}/registrations`);
             currentRegData = await res.json();
-            const countEl = document.getElementById('reg-modal-count');
-            const active = currentRegData.filter(r => r.status !== 'cancelled').length;
-            countEl.textContent = `\u0e1c\u0e39\u0e49\u0e08\u0e2d\u0e07\u0e17\u0e31\u0e49\u0e07\u0e2b\u0e21\u0e14 ${currentRegData.length} \u0e04\u0e19 (\u0e43\u0e0a\u0e49\u0e07\u0e32\u0e19 ${active} \u0e04\u0e19)`;
+            
+            renderRegistrationsTable();
+        }
+
+        function renderRegistrationsTable() {
+            const tbody = document.getElementById('registrations-tbody');
             tbody.innerHTML = '';
-            if (!currentRegData.length) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#94a3b8;">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e1c\u0e39\u0e49\u0e08\u0e2d\u0e07</td></tr>';
+            
+            const uploadFilter = document.getElementById('regs-upload-filter') ? document.getElementById('regs-upload-filter').value : 'all';
+            const searchInput = document.getElementById('regs-search-input');
+            const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+            let filteredData = currentRegData;
+            
+            if (uploadFilter === 'uploaded') {
+                filteredData = filteredData.filter(r => r.uploaded_image);
+            } else if (uploadFilter === 'not_uploaded') {
+                filteredData = filteredData.filter(r => !r.uploaded_image);
+            }
+
+            if (searchVal) {
+                filteredData = filteredData.filter(r => 
+                    r.username.toLowerCase().includes(searchVal) || 
+                    r.name.toLowerCase().includes(searchVal)
+                );
+            }
+
+            const countEl = document.getElementById('reg-modal-count');
+            const active = filteredData.filter(r => r.status !== 'cancelled').length;
+            countEl.textContent = `ผู้จองทั้งหมด ${currentRegData.length} คน (กรองแล้ว ${filteredData.length} คน, ใช้งาน ${active} คน)`;
+
+            if (!filteredData.length) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#94a3b8;">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
                 return;
             }
-            const statusMap = { confirmed: { label: '\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e41\u0e25\u0e49\u0e27', color: '#16a34a', bg: '#f0fdf4' }, pending: { label: '\u0e23\u0e2d\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19', color: '#f59e0b', bg: '#fffbeb' }, cancelled: { label: '\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01', color: '#dc2626', bg: '#fef2f2' } };
-            currentRegData.forEach(r => {
+
+            const statusMap = { 
+                confirmed: { label: 'ยืนยันแล้ว', color: '#16a34a', bg: '#f0fdf4' }, 
+                pending: { label: 'รอยืนยัน', color: '#f59e0b', bg: '#fffbeb' }, 
+                cancelled: { label: 'ยกเลิก', color: '#dc2626', bg: '#fef2f2' },
+                not_participated: { label: 'ไม่เข้าร่วม', color: '#64748b', bg: '#f1f5f9' }
+            };
+            filteredData.forEach(r => {
                 const s = statusMap[r.status] || statusMap.pending;
                 const dateStr = r.timestamp ? r.timestamp.split('T')[0] : '-';
+                
+                let uploadHtml = '';
+                if (r.uploaded_image) {
+                    uploadHtml = `<span class="status-badge" style="background: hsla(142, 70%, 45%, 0.15); color: hsl(142, 76%, 36%); border: 1.5px solid hsla(142, 70%, 45%, 0.3); font-weight:600; padding:4px 10px; border-radius:20px; font-size:12px; cursor:pointer;" onclick="openLightbox('${j(r.uploaded_image)}')" title="คลิกเพื่อดูรูปภาพหลักฐาน"><i class="fa-regular fa-image" style="margin-right:4px;"></i>อัปโหลดแล้ว</span>`;
+                } else {
+                    uploadHtml = `<span class="status-badge" style="background: hsla(215, 16%, 47%, 0.15); color: hsl(215, 16%, 35%); border: 1.5px solid hsla(215, 16%, 47%, 0.3); font-weight:600; padding:4px 10px; border-radius:20px; font-size:12px;">ยังไม่อัปโหลด</span>`;
+                }
+
                 tbody.innerHTML += `
-                    <tr style="${r.status==='cancelled'?'opacity:0.5;':''}">
+                    <tr style="${r.status==='cancelled'||r.status==='not_participated'?'opacity:0.75;':''}">
+                        <td style="text-align:center;">
+                            <input type="checkbox" class="reg-checkbox" value="${h(r.username)}" data-regid="${h(r.id)}" ${r.status==='cancelled'?'disabled':''}>
+                        </td>
                         <td style="font-family:monospace;font-weight:600;">${h(r.username)}</td>
                         <td>${h(r.name)}</td>
-                        <td style="font-size:12px;">${h((r.major||'-').replace('\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32',''))}</td>
+                        <td style="font-size:12px;">${h((r.major||'-').replace('สาขาวิชา',''))}</td>
                         <td style="font-size:12px;">${h(dateStr)}</td>
+                        <td style="text-align:center;">
+                            ${uploadHtml}
+                        </td>
                         <td style="text-align:center;">
                             <span style="background:${s.bg};color:${s.color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;">${h(s.label)}</span>
                         </td>
-                        <td style="text-align:center;">
-                            ${r.status !== 'confirmed' ? `<button class="btn btn-outline mini-btn" style="color:var(--success);" onclick="updateRegStatus('${j(r.id)}','confirmed')" title="\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19"><i class="fa-solid fa-check"></i></button>` : ''}
-                            ${r.status !== 'cancelled' ? `<button class="btn btn-outline mini-btn" style="color:var(--danger);" onclick="updateRegStatus('${j(r.id)}','cancelled')" title="\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                        <td style="text-align:center; display: flex; gap: 4px; justify-content: center; align-items: center; min-height: 48px;">
+                            ${r.status !== 'confirmed' ? `<button class="btn btn-outline mini-btn" style="color:var(--success);" onclick="updateRegStatus('${j(r.id)}','confirmed')" title="ยืนยัน"><i class="fa-solid fa-check"></i></button>` : ''}
+                            ${r.status !== 'not_participated' ? `<button class="btn btn-outline mini-btn" style="color:var(--slate-500);" onclick="updateRegStatus('${j(r.id)}','not_participated')" title="ไม่เข้าร่วม"><i class="fa-solid fa-user-slash"></i></button>` : ''}
+                            ${r.status !== 'cancelled' ? `<button class="btn btn-outline mini-btn" style="color:var(--danger);" onclick="updateRegStatus('${j(r.id)}','cancelled')" title="ยกเลิก"><i class="fa-solid fa-xmark"></i></button>` : ''}
                         </td>
                     </tr>`;
             });
         }
-
+ 
         async function updateRegStatus(regId, status) {
             const res = await fetch(`/api/registrations/${regId}/status`, {
                 method: 'POST', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ status })
             });
             if (res.ok) {
-                toast(status === 'confirmed' ? '\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e01\u0e32\u0e23\u0e08\u0e2d\u0e07\u0e41\u0e25\u0e49\u0e27' : '\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e01\u0e32\u0e23\u0e08\u0e2d\u0e07\u0e41\u0e25\u0e49\u0e27', status === 'confirmed' ? 'success' : 'info');
+                let msg = 'บันทึกสำเร็จ';
+                if (status === 'confirmed') msg = 'ยืนยันการจองแล้ว';
+                else if (status === 'cancelled') msg = 'ยกเลิกการจองแล้ว';
+                else if (status === 'not_participated') msg = 'เปลี่ยนสถานะเป็น "ไม่เข้าร่วม"';
+                toast(msg, status === 'confirmed' ? 'success' : 'info');
                 await loadRegistrationsForEvent(currentRegEventId);
-            } else { toast('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14', 'error'); }
+            } else { toast('เกิดข้อผิดพลาด', 'error'); }
+        }
+
+        function toggleSelectAllRegs() {
+            const all = document.getElementById('select-all-regs').checked;
+            document.querySelectorAll('.reg-checkbox').forEach(cb => {
+                if (!cb.disabled) cb.checked = all;
+            });
+        }
+
+        async function approveBulkRegs() {
+            const checkboxes = document.querySelectorAll('.reg-checkbox:checked');
+            const usernames = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (usernames.length === 0) { 
+                toast('กรุณาเลือกนักศึกษาอย่างน้อย 1 คน', 'warning'); 
+                return; 
+            }
+            
+            // Collect score (if specified)
+            const bulkScoreInput = document.getElementById('reg-bulk-score').value.trim();
+            const scores = {};
+            if (bulkScoreInput !== '') {
+                const bulkScore = parseInt(bulkScoreInput) || 0;
+                checkboxes.forEach(cb => {
+                    scores[cb.value] = bulkScore;
+                });
+            }
+            
+            if (!confirm(`ยืนยันการเข้าร่วมกิจกรรม (อนุมัติพร้อมบันทึกคะแนน) สำหรับนักศึกษาจำนวน ${usernames.length} คน?`)) {
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/admin/update-status-bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        event_id: currentRegEventId, 
+                        usernames: usernames, 
+                        status: 'approved', 
+                        scores: scores 
+                    })
+                });
+                
+                if (res.ok) {
+                    toast('ยืนยันและอนุมัติการเข้าร่วมสำเร็จ!', 'success');
+                    await loadRegistrationsForEvent(currentRegEventId);
+                } else {
+                    const text = await res.text();
+                    let errMsg = text;
+                    try { const data = JSON.parse(text); errMsg = data.message || 'Error'; } catch(e) {}
+                    toast('ไม่สามารถอนุมัติได้: ' + errMsg, 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                toast('เกิดข้อผิดพลาดของระบบ', 'error');
+            }
+        }
+
+        async function cancelBulkRegs() {
+            const checkboxes = document.querySelectorAll('.reg-checkbox:checked');
+            const usernames = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (usernames.length === 0) { 
+                toast('กรุณาเลือกรายการจองอย่างน้อย 1 รายการ', 'warning'); 
+                return; 
+            }
+            
+            if (!confirm(`ยืนยันการยกเลิกการจองกิจกรรมสำหรับนักศึกษาจำนวน ${usernames.length} คน?`)) {
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/admin/registrations/status-bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        event_id: currentRegEventId, 
+                        usernames: usernames, 
+                        status: 'cancelled' 
+                    })
+                });
+                
+                if (res.ok) {
+                    toast('ยกเลิกรายการจองที่เลือกสำเร็จ!', 'success');
+                    await loadRegistrationsForEvent(currentRegEventId);
+                } else {
+                    const text = await res.text();
+                    let errMsg = text;
+                    try { const data = JSON.parse(text); errMsg = data.message || 'Error'; } catch(e) {}
+                    toast('ไม่สามารถยกเลิกได้: ' + errMsg, 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                toast('เกิดข้อผิดพลาดของระบบ', 'error');
+            }
+        }
+
+        async function notParticipateBulkRegs() {
+            const checkboxes = document.querySelectorAll('.reg-checkbox:checked');
+            const usernames = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (usernames.length === 0) { 
+                toast('กรุณาเลือกรายการจองอย่างน้อย 1 รายการ', 'warning'); 
+                return; 
+            }
+            
+            if (!confirm(`ยืนยันการตั้งค่าสถานะ "ไม่เข้าร่วม" สำหรับนักศึกษาจำนวน ${usernames.length} คน?`)) {
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/admin/registrations/status-bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        event_id: currentRegEventId, 
+                        usernames: usernames, 
+                        status: 'not_participated' 
+                    })
+                });
+                
+                if (res.ok) {
+                    toast('เปลี่ยนสถานะเป็น "ไม่เข้าร่วม" เรียบร้อยแล้ว', 'success');
+                    await loadRegistrationsForEvent(currentRegEventId);
+                } else {
+                    const text = await res.text();
+                    let errMsg = text;
+                    try { const data = JSON.parse(text); errMsg = data.message || 'Error'; } catch(e) {}
+                    toast('ไม่สามารถเปลี่ยนสถานะได้: ' + errMsg, 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                toast('เกิดข้อผิดพลาดของระบบ', 'error');
+            }
         }
 
         function exportRegCSV() {
             if (!currentRegData.length) { toast('\u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25', 'warning'); return; }
             const BOM = '\uFEFF';
-            const headers = ['\u0e23\u0e2b\u0e31\u0e2a\u0e19\u0e31\u0e01\u0e28\u0e36\u0e01\u0e29\u0e32','\u0e0a\u0e37\u0e48\u0e2d-\u0e19\u0e32\u0e21\u0e2a\u0e01\u0e38\u0e25','\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32','\u0e2d\u0e35\u0e40\u0e21\u0e25','\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e08\u0e2d\u0e07','\u0e2a\u0e16\u0e32\u0e19\u0e30'];
-            const rows = currentRegData.map(r => [`"${r.username}"`,`"${r.name}"`,`"${r.major||''}"`,`"${r.email||''}"`,`"${r.timestamp||''}"`,`"${r.status}"`].join(','));
+            const headers = ['\u0e23\u0e2b\u0e31\u0e2a\u0e19\u0e31\u0e01\u0e28\u0e36\u0e01\u0e29\u0e32','\u0e0a\u0e37\u0e48\u0e2d-\u0e19\u0e32\u0e21\u0e2a\u0e01\u0e38\u0e25','\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32','\u0e2d\u0e35\u0e40\u0e21\u0e25','\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e08\u0e2d\u0e07','\u0e01\u0e32\u0e23\u0e2a\u0e48\u0e02\u0e07\u0e32\u0e19','\u0e2a\u0e16\u0e32\u0e19\u0e30'];
+            
+            const statusLabels = {
+                confirmed: 'ยืนยันแล้ว',
+                pending: 'รอยืนยัน',
+                cancelled: 'ยกเลิก',
+                not_participated: 'ไม่เข้าร่วม'
+            };
+
+            const rows = currentRegData.map(r => [
+                `"${r.username}"`,
+                `"${r.name}"`,
+                `"${r.major||''}"`,
+                `"${r.email||''}"`,
+                `"${r.timestamp||''}"`,
+                `"${r.uploaded_image ? 'อัปโหลดแล้ว' : 'ยังไม่อัปโหลด'}"`,
+                `"${statusLabels[r.status] || r.status}"`
+            ].join(','));
             const csv = BOM + [headers.join(','), ...rows].join('\n');
             const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
             const url = URL.createObjectURL(blob);

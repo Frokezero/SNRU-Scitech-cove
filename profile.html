@@ -1385,7 +1385,7 @@
 
                     container.innerHTML += `
                         <div class="history-item">
-                            <img src="${h(item.image_url)}" class="history-img" onclick="window.open('${j(item.image_url)}','_blank')" title="คลิกเพื่อดูรูปเต็ม">
+                            ${item.image_url ? `<img src="${h(item.image_url)}" class="history-img" onclick="window.open('${j(item.image_url)}','_blank')" title="คลิกเพื่อดูรูปเต็ม">` : `<div class="history-img" style="display:flex;align-items:center;justify-content:center;background:#e0f2fe;color:#0284c7;cursor:default;" title="เช็คอินผ่าน QR Code"><i class="fa-solid fa-qrcode" style="font-size:24px;"></i></div>`}
                             <div class="history-info">
                                 <div class="history-title">${categoryBadge}${h(item.event_title)}</div>
                                 <div class="history-date"><i class="fa-solid fa-calendar-day"></i> ${h(dateStr)}</div>

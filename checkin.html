@@ -3,13 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบเช็คอินกิจกรรมอัจฉริยะ - กิจกรรมนักศึกษา 2569</title>
+    <title>ระบบเช็คอินกิจกรรม - คณะวิทยาศาสตร์และเทคโนโลยี</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="theme-loader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
         :root {
             --primary: #0ea5e9;
@@ -145,8 +143,6 @@
         /* State colors */
         .state-loading .status-icon-wrapper { background: rgba(14, 165, 233, 0.1); color: var(--primary); }
         .state-loading .icon-pulse { background-color: var(--primary); }
-        .state-confirm .status-icon-wrapper { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-        .state-confirm .icon-pulse { background-color: var(--warning); }
         .state-success .status-icon-wrapper { background: rgba(16, 185, 129, 0.15); color: var(--success); }
         .state-success .icon-pulse { background-color: var(--success); }
         .state-error .status-icon-wrapper { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
@@ -269,21 +265,6 @@
             color: #475569 !important;
         }
 
-        /* Micro-Animations & Badges */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            margin-top: 10px;
-        }
-        .badge-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
-        .badge-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-        .badge-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
-
         .spinner {
             font-size: 32px;
             animation: spin 1s linear infinite;
@@ -322,7 +303,7 @@
         #photo-upload-area {
             border: 2px dashed var(--primary);
             border-radius: 16px;
-            padding: 24px 20px;
+            padding: 30px 20px;
             margin: 15px 0;
             cursor: pointer;
             transition: all 0.25s ease;
@@ -330,7 +311,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             background: rgba(14, 165, 233, 0.04);
         }
         #photo-upload-area:hover {
@@ -342,9 +323,14 @@
             background: rgba(14, 165, 233, 0.08);
             border-color: rgba(14, 165, 233, 0.5);
         }
-        html.dark-theme #photo-upload-area:hover {
-            border-color: var(--primary);
-            background: rgba(14, 165, 233, 0.12);
+        
+        /* Confirm Section styles */
+        .state-confirm .status-icon-wrapper {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+        .state-confirm .icon-pulse {
+            background-color: var(--warning);
         }
     </style>
 </head>
@@ -358,58 +344,48 @@
         <div class="state-section state-loading active" id="state-loading">
             <div class="status-icon-wrapper">
                 <div class="icon-pulse"></div>
-                <i class="fa-solid fa-location-crosshairs spinner" style="font-size: 36px;"></i>
+                <i class="fa-solid fa-qrcode spinner" style="font-size: 38px;"></i>
             </div>
-            <h1>กำลังระบุตำแหน่งของคุณ</h1>
-            <p class="subtitle" id="loading-subtitle">ระบบกำลังดึงข้อมูลพิกัดดาวเทียม (GPS) และยืนยันความปลอดภัย...</p>
+            <h1>กำลังดำเนินการเช็คอิน</h1>
+            <p class="subtitle" id="loading-subtitle">กำลังตรวจสอบข้อมูลรหัสความปลอดภัยและดำเนินการเช็คอินเข้าร่วมกิจกรรม...</p>
         </div>
 
         <!-- 2. CONFIRM CHECK-IN STATE -->
         <div class="state-section state-confirm" id="state-confirm">
             <div class="status-icon-wrapper">
                 <div class="icon-pulse"></div>
-                <i class="fa-solid fa-location-dot" style="font-size: 38px;"></i>
+                <i class="fa-solid fa-camera" style="font-size: 38px;"></i>
             </div>
-            <h1>ยืนยันการเช็คอิน</h1>
-            <p class="subtitle" id="confirm-subtitle">พิกัดดาวเทียมของคุณตรงเงื่อนไข กรุณากดปุ่มเพื่อสะสมแต้ม</p>
+            <h1>ถ่ายรูปยืนยันเช็คอิน</h1>
+            <p class="subtitle" id="confirm-subtitle">กรุณาถ่ายภาพหรือแนบภาพถ่ายหน้างานของคุณเพื่อดำเนินการเช็คอิน</p>
 
-            <div class="info-box">
+            <div class="info-box" style="margin-bottom: 20px;">
                 <div class="info-row">
                     <i class="fa-solid fa-award"></i>
                     <div>
                         <div class="info-label">ข้อมูลกิจกรรม</div>
-                        <div class="info-value" id="confirm-event-title">กำลังโหลดข้อมูลกิจกรรม...</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <i class="fa-solid fa-circle-nodes"></i>
-                    <div>
-                        <div class="info-label">ระบบความปลอดภัยพิกัด (GPS)</div>
-                        <div class="info-value" id="confirm-gps-status">อยู่ในขอบข่ายระยะจัดงาน</div>
+                        <div class="info-value" id="confirm-event-title">กำลังโหลด...</div>
                     </div>
                 </div>
             </div>
-
-            <!-- Map Container -->
-            <div id="checkin-map" style="height: 200px; border-radius: 16px; margin: 15px 0; border: 1px solid var(--slate-200); box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); z-index: 1;"></div>
 
             <!-- Photo Upload Area -->
             <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none;" onchange="handleFileSelect(event)">
             
             <div id="photo-upload-area" onclick="document.getElementById('camera-input').click()">
-                <i class="fa-solid fa-camera" style="font-size: 28px; color: var(--primary);"></i>
-                <span style="font-size: 14px; font-weight: 600; color: var(--slate-600);" id="upload-placeholder-text">ถ่ายภาพหน้างานเพื่อยืนยันตัวตน</span>
+                <i class="fa-solid fa-camera" style="font-size: 32px; color: var(--primary);"></i>
+                <span style="font-size: 14px; font-weight: 600; color: var(--slate-600);">กดที่นี่เพื่อถ่ายภาพหน้างาน</span>
             </div>
             
             <div id="photo-preview-container" style="display: none; position: relative; margin: 15px 0; border-radius: 16px; overflow: hidden; border: 1px solid var(--slate-200); box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                <img id="photo-preview" src="" style="width: 100%; max-height: 200px; object-fit: cover; display: block;">
-                <button onclick="removeSelectedFile(event)" style="position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.9); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.2s;">
+                <img id="photo-preview" src="" style="width: 100%; max-height: 240px; object-fit: cover; display: block;">
+                <button onclick="removeSelectedFile(event)" style="position: absolute; top: 10px; right: 10px; background: rgba(239, 68, 68, 0.9); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
 
-            <button class="btn btn-primary" id="btn-submit-checkin" onclick="submitCheckIn()">
-                <i class="fa-solid fa-signature"></i> เช็คอินเข้าร่วมทันที
+            <button class="btn btn-primary" id="btn-submit-checkin" onclick="submitCheckIn()" style="margin-top: 10px;">
+                <i class="fa-solid fa-signature"></i> ส่งรูปภาพเพื่อเช็คอิน
             </button>
         </div>
 
@@ -420,16 +396,16 @@
                 <i class="fa-solid fa-circle-check" style="font-size: 42px;"></i>
             </div>
             <h1>เช็คอินสำเร็จ!</h1>
-            <p class="subtitle" id="success-subtitle">สะสมแต้มคะแนนความดีและเวลากิจกรรมลงในพอร์ตของคุณเรียบร้อย</p>
+            <p class="subtitle" id="success-subtitle">บันทึกประวัติเข้าร่วมและสะสมแต้มเวลาของกิจกรรมเรียบร้อยแล้ว</p>
 
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-val" id="success-hour-val">+0</div>
-                    <div class="stat-label">คะแนนชั่วโมงสะสม</div>
+                    <div class="stat-label">ชั่วโมงสะสมที่ได้รับ</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-val"><i class="fa-solid fa-square-check"></i></div>
-                    <div class="stat-label">สถานะอนุมัติทันที</div>
+                    <div class="stat-val"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="stat-label">สถานะการเช็คอิน</div>
                 </div>
             </div>
 
@@ -437,14 +413,14 @@
                 <div class="info-row">
                     <i class="fa-solid fa-book-open"></i>
                     <div>
-                        <div class="info-label">กิจกรรมสะสม</div>
+                        <div class="info-label">ชื่อกิจกรรม</div>
                         <div class="info-value" id="success-event-title">-</div>
                     </div>
                 </div>
                 <div class="info-row">
                     <i class="fa-solid fa-calendar-day"></i>
                     <div>
-                        <div class="info-label">วันที่เช็คอิน</div>
+                        <div class="info-label">วันที่จัดงาน</div>
                         <div class="info-value" id="success-event-date">-</div>
                     </div>
                 </div>
@@ -455,17 +431,17 @@
             </button>
         </div>
 
-        <!-- 4. ERROR STATE -->
+        <!-- 3. ERROR STATE -->
         <div class="state-section state-error" id="state-error">
             <div class="status-icon-wrapper">
                 <div class="icon-pulse"></div>
                 <i class="fa-solid fa-circle-exclamation" style="font-size: 40px;"></i>
             </div>
             <h1 id="error-title">เช็คอินไม่สำเร็จ</h1>
-            <p class="subtitle" id="error-msg">กรุณาเข้าใกล้ขอบเขตกิจกรรมที่กำหนด</p>
+            <p class="subtitle" id="error-msg">เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์เข้าร่วม</p>
 
             <div style="margin-bottom: 24px; padding: 15px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); border-radius: 16px; text-align: left; font-size: 13px; color: var(--slate-500); line-height: 1.5;" id="error-details">
-                ไม่สามารถเช็คอินได้เนื่องจากอยู่นอกพื้นที่หรือระยะเวลาความปลอดภัยของ QR Code เกินรอบวิกฤต กรุณาติดต่อแอดมินผู้ดูแล
+                ไม่สามารถเช็คอินได้เนื่องจาก Token เช็คอินหมดอายุหรือความปลอดภัยไม่ถูกต้อง กรุณาสแกนคิวอาร์โค้ดล่าสุดจากแผงหน้าจอแอดมินใหม่อีกครั้ง
             </div>
 
             <div style="display: flex; gap: 10px;">
@@ -482,9 +458,6 @@
     <script>
         // Global variables
         let urlToken = null;
-        let userLatitude = null;
-        let userLongitude = null;
-        let eventData = null;
 
         // Theme Loader Bindings
         const themeBtn = document.getElementById('theme-toggle');
@@ -522,169 +495,37 @@
                 return;
             }
 
-            // Begin GPS coordinate request
-            acquireGPSLocation();
+            // Begin verifying token and fetching event info
+            verifyTokenAndFetchEvent();
         });
 
-        // Step 1: Geolocation access
-        function acquireGPSLocation() {
+        // Verify token on the client and retrieve event details
+        async function verifyTokenAndFetchEvent() {
             showState('state-loading');
-            document.getElementById('loading-subtitle').textContent = 'ระบบกำลังขออนุมัติใช้งานพิกัดดาวเทียม (GPS) เพื่อยืนยันการเข้าร่วม...';
+            document.getElementById('loading-subtitle').textContent = 'กำลังตรวจสอบสิทธิ์ความปลอดภัยและเตรียมข้อมูลเช็คอิน...';
 
-            if (!navigator.geolocation) {
-                showError('เบราว์เซอร์ไม่รองรับ GPS', 'อุปกรณ์หรือแอปพลิเคชันของคุณไม่สนับสนุนการระบุตำแหน่งด้วยระบบเบราว์เซอร์ดาวเทียม โปรดใช้ Chrome หรือ Safari รุ่นล่าสุด');
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    userLatitude = position.coords.latitude;
-                    userLongitude = position.coords.longitude;
-                    
-                    // Coordinates acquired, now check token details with backend
-                    verifyTokenWithBackend();
-                },
-                (error) => {
-                    console.error("GPS Error:", error);
-                    let errMessage = 'กรุณาอนุญาตสิทธิ์เข้าถึงพิกัดตำแหน่ง (GPS Location) บนมือถือของท่าน เพื่อยืนยันความถูกต้องในรัศมีกิจกรรม';
-                    if (error.code === error.PERMISSION_DENIED) {
-                        errMessage = 'คุณปฏิเสธสิทธิ์การเข้าถึงตำแหน่งดาวเทียม กรุณาอนุญาตการเข้าถึงสิทธิ์ในระบบตั้งค่าความเป็นส่วนตัวของเบราว์เซอร์แล้วลองใหม่อีกครั้ง';
-                    }
-                    showError('ต้องการสิทธิ์การระบุตำแหน่ง GPS', errMessage);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
-        }
-
-        // Step 2: Validate token via backend
-        let checkinMap = null;
-
-        function initMap(event) {
-            const isGpsActive = (event.latitude !== 0.0 || event.longitude !== 0.0);
-            const mapContainer = document.getElementById('checkin-map');
-            
-            if (!isGpsActive) {
-                mapContainer.style.display = 'none';
-                return;
-            }
-            
-            mapContainer.style.display = 'block';
-            
-            if (checkinMap) {
-                try {
-                    checkinMap.remove();
-                } catch(e) {
-                    console.error("Map remove error:", e);
-                }
-            }
-            
-            const eventLat = parseFloat(event.latitude) || 17.18994;
-            const eventLng = parseFloat(event.longitude) || 104.09153;
-            
-            checkinMap = L.map('checkin-map', {
-                zoomControl: true,
-                scrollWheelZoom: false
-            });
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(checkinMap);
-            
-            // Custom modern icons using SVG/HTML
-            const userIcon = L.divIcon({
-                className: 'user-gps-marker',
-                html: `<div style="background-color: #0ea5e9; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(14, 165, 233, 0.6); position: relative;"><div style="position: absolute; top: -3px; left: -3px; right: -3px; bottom: -3px; border-radius: 50%; border: 1px solid #0ea5e9; animation: ping 2s infinite;"></div></div>`,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-            });
-            
-            const eventIcon = L.divIcon({
-                className: 'event-gps-marker',
-                html: `<div style="background-color: #ef4444; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);"></div>`,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-            });
-            
-            // Event Marker
-            L.marker([eventLat, eventLng], { icon: eventIcon })
-                .addTo(checkinMap)
-                .bindPopup(`<b>จุดจัดกิจกรรม:</b> ${event.title}`);
-                
-            // User Marker
-            if (userLatitude && userLongitude) {
-                L.marker([userLatitude, userLongitude], { icon: userIcon })
-                    .addTo(checkinMap)
-                    .bindPopup(`<b>คุณอยู่ที่นี่</b>`);
-                    
-                const bounds = L.latLngBounds([
-                    [userLatitude, userLongitude],
-                    [eventLat, eventLng]
-                ]);
-                checkinMap.fitBounds(bounds, { padding: [40, 40] });
-            } else {
-                checkinMap.setView([eventLat, eventLng], 16);
-            }
-            
-            // 500-meter buffer radius
-            L.circle([eventLat, eventLng], {
-                color: '#10b981',
-                fillColor: '#10b981',
-                fillOpacity: 0.15,
-                radius: 500,
-                weight: 2,
-                dashArray: '6, 6'
-            }).addTo(checkinMap);
-        }
-
-        async function verifyTokenWithBackend() {
-            document.getElementById('loading-subtitle').textContent = 'กำลังสื่อสารกับระบบเซิร์ฟเวอร์ เพื่อตรวจจับพิกัดความเหมาะสม...';
-            
             try {
+                // Decode token to find event_id
                 const decodedStr = atob(urlToken.replace(/_/g, '/').replace(/-/g, '+'));
                 const lastDot = decodedStr.lastIndexOf('.');
                 const payloadStr = lastDot !== -1 ? decodedStr.substring(0, lastDot) : decodedStr;
                 const payload = JSON.parse(payloadStr);
                 const eventId = payload.event_id;
-                
-                // Get event info directly
-                const res = await fetch(`/api/events`);
+
+                const res = await fetch('/api/events');
                 const events = await res.json();
-                
+
                 const event = events.find(x => x.id === eventId);
                 if (!event) {
-                    showError('ไม่พบข้อมูลกิจกรรมนี้', 'ไม่พบข้อมูลโครงการหรือกิจกรรมดังกล่าวในปฏิทิน กิจกรรมอาจถูกลบหรือระงับการให้บริการไปแล้ว');
+                    showError('ไม่พบข้อมูลกิจกรรมนี้', 'ไม่พบข้อมูลโครงการหรือกิจกรรมดังกล่าวในระบบ กิจกรรมอาจถูกระงับหรือลบไปแล้ว');
                     return;
                 }
 
-                eventData = event;
-                
-                // Show confirm state
-                showState('state-confirm');
                 document.getElementById('confirm-event-title').textContent = event.title;
-                
-                const isGpsActive = (event.latitude !== 0.0 || event.longitude !== 0.0);
-                const gpsStatusEl = document.getElementById('confirm-gps-status');
-                
-                if (isGpsActive) {
-                    gpsStatusEl.parentNode.parentNode.style.borderColor = 'rgba(16, 185, 129, 0.2)';
-                    gpsStatusEl.style.color = 'var(--success)';
-                    gpsStatusEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> ตรวจจับความแม่นยำ GPS (กิจกรรมมีพิกัดพ้นดิน)`;
-                } else {
-                    gpsStatusEl.parentNode.parentNode.style.borderColor = 'rgba(100, 116, 139, 0.2)';
-                    gpsStatusEl.style.color = 'var(--slate-500)';
-                    gpsStatusEl.innerHTML = `<i class="fa-solid fa-globe"></i> โหมดสแกนปกติ (เปิดให้เช็คอินได้ทันทีโดยไม่มีการตรวจระยะห่าง)`;
-                }
-
-                // Initialize Leaflet Map
-                initMap(event);
-                
+                showState('state-confirm');
             } catch (err) {
-                console.error("Token parse error:", err);
-                showError('รูปแบบ Token ผิดพลาด', 'โครงสร้างรหัสความปลอดภัยชำรุดเสียหายหรือไม่สมบูรณ์ กรุณาสแกนรับลิ้งก์จากแผงหน้าจอแอดมินใหม่อีกครั้ง');
+                console.error("Token verify error:", err);
+                showError('รูปแบบ Token ผิดพลาด', 'โครงสร้างรหัสความปลอดภัยชำรุดเสียหายหรือไม่สมบูรณ์ กรุณาสแกนคิวอาร์โค้ดล่าสุดจากแผงหน้าจอแอดมินใหม่อีกครั้ง');
             }
         }
 
@@ -696,7 +537,7 @@
 
             // Check if file is an image
             if (!file.type.startsWith('image/')) {
-                alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+                alert('กรุณาเลือกหรือถ่ายรูปภาพเท่านั้น');
                 return;
             }
 
@@ -720,10 +561,72 @@
             document.getElementById('photo-upload-area').style.display = 'flex';
         }
 
-        // Step 3: Trigger real check-in POST
+        // HTML5 Canvas client-side image compression
+        function compressImageBeforeUpload(file, maxWidth = 1200, maxHeight = 1200, quality = 0.75) {
+            return new Promise((resolve) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    resolve(file); // fallback to original file if not image
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        // Calculate new dimensions maintaining aspect ratio
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height = Math.round((height * maxWidth) / width);
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width = Math.round((width * maxHeight) / height);
+                                height = maxHeight;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                // Create compressed File object
+                                const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now()
+                                });
+                                resolve(compressedFile);
+                            } else {
+                                resolve(file); // fallback if blob creation fails
+                            }
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = (err) => {
+                        console.error('Image load error during compression:', err);
+                        resolve(file);
+                    };
+                };
+                reader.onerror = (err) => {
+                    console.error('File read error during compression:', err);
+                    resolve(file);
+                };
+            });
+        }
+
+        // Submit check-in with compressed photo
         async function submitCheckIn() {
             if (!selectedFile) {
-                showError('ต้องการรูปภาพยืนยันตัวตน', 'กรุณาถ่ายภาพหรือเลือกรูปภาพหน้างานเพื่อทำการเช็คอินเข้าร่วมกิจกรรม');
+                alert('กรุณาแนบรูปภาพหรือถ่ายภาพหน้างานเพื่อทำการเช็คอิน');
                 return;
             }
 
@@ -733,11 +636,13 @@
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังอัปโหลดภาพและเช็คอิน...`;
 
             try {
+                // Perform client-side compression
+                const compressedFile = await compressImageBeforeUpload(selectedFile, 1200, 1200, 0.75);
+                console.log(`Image compressed. Original size: ${selectedFile.size} bytes, Compressed size: ${compressedFile.size} bytes`);
+
                 const formData = new FormData();
                 formData.append('token', urlToken);
-                formData.append('latitude', userLatitude);
-                formData.append('longitude', userLongitude);
-                formData.append('file', selectedFile);
+                formData.append('file', compressedFile);
 
                 const res = await fetch('/api/student/checkin', {
                     method: 'POST',
@@ -747,14 +652,12 @@
                 const data = await res.json();
                 
                 if (data.success) {
-                    // Trigger confetti fireworks celebration
                     triggerConfettiCelebration();
-                    
-                    // Show success UI
                     showState('state-success');
                     document.getElementById('success-event-title').textContent = data.event.title;
                     document.getElementById('success-event-date').textContent = data.event.date;
                     document.getElementById('success-hour-val').textContent = `+${data.event.score}`;
+                    document.getElementById('success-subtitle').innerHTML = `ส่งรูปภาพหลักฐานเช็คอินเรียบร้อยแล้ว<br><span style="color:var(--warning);font-weight:600;">(รอแอดมินตรวจสอบหลักฐานเพื่ออนุมัติคะแนนสะสม)</span>`;
                 } else {
                     showError('เช็คอินไม่สำเร็จ', data.message);
                 }
@@ -764,7 +667,7 @@
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('btn-disabled');
-                btn.innerHTML = `<i class="fa-solid fa-signature"></i> เช็คอินเข้าร่วมทันที`;
+                btn.innerHTML = `<i class="fa-solid fa-signature"></i> ส่งรูปภาพเพื่อเช็คอิน`;
             }
         }
 
@@ -802,7 +705,8 @@
             document.querySelectorAll('.state-section').forEach(el => {
                 el.classList.remove('active');
             });
-            document.getElementById(stateId).classList.add('active');
+            const target = document.getElementById(stateId);
+            if (target) target.classList.add('active');
         }
 
         function showError(title, message) {
@@ -813,7 +717,7 @@
         }
 
         function tryAgain() {
-            acquireGPSLocation();
+            verifyTokenAndFetchEvent();
         }
 
         function redirectToHome() {
