@@ -926,7 +926,8 @@ function renderUserControls() {
     if (currentUser) {
         const roleColor = { admin: '#ef4444', major: '#f59e0b', student: '#10b981' }[currentUser.role] || '#94a3b8';
         const profileLink = currentUser.role === 'student'
-            ? `<a href="/profile" class="nav-btn nav-btn-outline"><i class="fa-solid fa-user"></i><span>โปรไฟล์</span></a>` : '';
+            ? `<a href="/profile" class="nav-btn nav-btn-outline"><i class="fa-solid fa-clock-rotate-left"></i><span>ประวัติ</span></a><a href="/user-info" class="nav-btn nav-btn-outline"><i class="fa-solid fa-id-card"></i><span>ข้อมูลส่วนตัว</span></a>` : '';
+
         controls.innerHTML = `
             ${profileLink}
             <div class="nav-btn nav-btn-ghost" style="gap:6px;cursor:default;">

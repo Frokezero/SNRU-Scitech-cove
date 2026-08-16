@@ -1165,6 +1165,17 @@ def profile():
         return redirect('/')
     return send_from_directory('.', 'profile.html')
 
+@app.route('/user-info')
+@app.route('/user_info')
+def user_info_page():
+    if 'username' not in session:
+        return redirect('/login')
+    users = load_users()
+    if session['username'] not in users or users[session['username']]['role'] != 'student':
+        return redirect('/')
+    return send_from_directory('.', 'user_info.html')
+
+
 
 @app.route('/portfolio')
 def portfolio():
