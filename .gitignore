@@ -220,4 +220,8 @@ scratch_check_db.py
 scratch/
 
 # Analysis/result files (local only)
-analysis_results.md
+analysis_results.md
+
+# Temporary archives and documents
+*.zip
+*.pdf

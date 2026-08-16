@@ -2,14 +2,17 @@ import sqlite3
 import os
 import json
 
-DB_FILE = 'database.sqlite'
+DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.sqlite')
 
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE, timeout=10)
     conn.row_factory = sqlite3.Row
     # Enforce foreign key constraints and WAL mode for integrity and concurrency
     conn.execute('PRAGMA foreign_keys = ON')
-    conn.execute('PRAGMA journal_mode=WAL')
+    try:
+        conn.execute('PRAGMA journal_mode=WAL')
+    except Exception:
+        pass # Fallback to default journal mode if WAL is restricted on shared hosting
     conn.execute('PRAGMA synchronous=NORMAL')
     
     # Auto-register connection with Flask app context if available

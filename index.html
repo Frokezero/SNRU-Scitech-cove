@@ -11,6 +11,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=1.1">
+    <link rel="stylesheet" href="chatbot.css">
     <!-- QR Code Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="theme-loader.js"></script>
@@ -37,6 +38,10 @@
                 </button>
                 <button class="nav-btn nav-btn-ghost" id="nav-share-btn" onclick="shareWebsite()" title="แชร์เว็บไซต์">
                     <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button class="nav-btn nav-btn-ghost" onclick="scrollToAiSection()" title="คุยกับ AI ผู้ช่วย">
+                    <i class="fa-solid fa-robot" style="color: #0284c7;"></i>
+                    <span>ถาม AI</span>
                 </button>
                 <button class="nav-btn nav-btn-amber" onclick="openPublicLeaderboard()">
                     <i class="fa-solid fa-trophy"></i>
@@ -200,6 +205,37 @@
                 <!-- JS inject days -->
             </div>
         </div>
+        <!-- Inline AI Chatbot Assistant Section -->
+        <section class="chatbot-inline-section" id="ai-assistant-section">
+            <div class="chatbot-inline-card">
+                <div class="chatbot-inline-header">
+                    <div class="chatbot-inline-brand">
+                        <div class="chatbot-inline-avatar"><i class="fa-solid fa-robot"></i></div>
+                        <div class="chatbot-inline-title">
+                            <h3>น้องกิจกรรม Scitech AI Assistant</h3>
+                            <p><span class="chatbot-status-dot"></span> ผู้ช่วยอัจฉริยะ ตอบคำถามกิจกรรม เช็คคะแนน และขั้นตอนการใช้งานได้ทันที</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="chatbot-inline-body">
+                    <div class="chatbot-messages" id="inline-chatbot-messages">
+                        <div class="chat-bubble-row bot">
+                            <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                            <div class="chat-bubble">🤖 สวัสดีครับ! พิมพ์คำถามเกี่ยวกับกิจกรรม หรือเลือกกดปุ่มสอบถามด่วนด้านล่างได้เลยครับ</div>
+                        </div>
+                    </div>
+                    <div class="chatbot-suggestions" id="inline-chatbot-suggestions">
+                        <button class="suggestion-chip" data-msg="มีกิจกรรมอะไรบ้าง">📅 กิจกรรมน่าสนใจ</button>
+                        <button class="suggestion-chip" data-msg="ฉันขาดอีกกี่คะแนนถึงจะจบ">⭐ เช็คเป้าหมายจบการศึกษา</button>
+                        <button class="suggestion-chip" data-msg="วิธีลงทะเบียนเข้าร่วมกิจกรรม">❓ วิธีลงทะเบียน</button>
+                    </div>
+                    <div class="chatbot-input-area">
+                        <input type="text" class="chatbot-input" id="inline-chatbot-input" placeholder="พิมพ์คำถามที่ต้องการทราบ..." autocomplete="off">
+                        <button class="chatbot-send-btn" id="inline-chatbot-send" title="ส่งคำถาม"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- ===== FOOTER ===== -->

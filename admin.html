@@ -6,7 +6,9 @@
     <title>ระบบหลังบ้าน - ปฏิทินกิจกรรม</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="chatbot.css">
     <script src="theme-loader.js"></script>
+    <script src="ui-shared.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -1074,6 +1076,20 @@
                         <option value="not_uploaded">ยังไม่อัปโหลด</option>
                     </select>
                 </div>
+                <div style="flex: 1; min-width: 160px; display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.5px;">สถานะอนุมัติ:</label>
+                    <select id="regs-approval-filter" onchange="renderRegistrationsTable()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; margin: 0;">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="approved">อนุมัติแล้ว (ได้รับคะแนน)</option>
+                        <option value="pending">ยังไม่ได้รับการอนุมัติ</option>
+                    </select>
+                </div>
+                <div style="flex: 1.2; min-width: 180px; display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.5px;">สาขาวิชา:</label>
+                    <select id="regs-major-filter" onchange="renderRegistrationsTable()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; margin: 0;">
+                        <option value="all">ทั้งหมด</option>
+                    </select>
+                </div>
                 <div style="flex: 2; min-width: 220px; display: flex; flex-direction: column; align-items: stretch; gap: 6px;">
                     <label style="font-size: 12px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.5px;">ค้นหารายชื่อ / รหัสนักศึกษา:</label>
                     <input type="text" id="regs-search-input" placeholder="พิมพ์ชื่อหรือรหัสเพื่อค้นหา..." oninput="renderRegistrationsTable()" style="width: 100%; border-radius: 8px; border: 1px solid var(--slate-200); padding: 8px; margin: 0;">
@@ -1287,6 +1303,18 @@
                         opt.value = m;
                         opt.textContent = m;
                         attendanceFilter.appendChild(opt);
+                    });
+                }
+
+                // 5. Populate regs-major-filter
+                const regsMajorFilter = document.getElementById('regs-major-filter');
+                if (regsMajorFilter) {
+                    regsMajorFilter.innerHTML = '<option value="all">ทุกสาขาวิชา</option>';
+                    majors.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.textContent = m;
+                        regsMajorFilter.appendChild(opt);
                     });
                 }
             } catch (e) {
@@ -2863,6 +2891,10 @@
             // Reset Filters on modal open
             const regsUploadFilter = document.getElementById('regs-upload-filter');
             if (regsUploadFilter) regsUploadFilter.value = 'all';
+            const regsApprovalFilter = document.getElementById('regs-approval-filter');
+            if (regsApprovalFilter) regsApprovalFilter.value = 'all';
+            const regsMajorFilter = document.getElementById('regs-major-filter');
+            if (regsMajorFilter) regsMajorFilter.value = 'all';
             const regsSearchInput = document.getElementById('regs-search-input');
             if (regsSearchInput) regsSearchInput.value = '';
 
@@ -2894,6 +2926,8 @@
             tbody.innerHTML = '';
             
             const uploadFilter = document.getElementById('regs-upload-filter') ? document.getElementById('regs-upload-filter').value : 'all';
+            const approvalFilter = document.getElementById('regs-approval-filter') ? document.getElementById('regs-approval-filter').value : 'all';
+            const majorFilter = document.getElementById('regs-major-filter') ? document.getElementById('regs-major-filter').value : 'all';
             const searchInput = document.getElementById('regs-search-input');
             const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
@@ -2903,6 +2937,16 @@
                 filteredData = filteredData.filter(r => r.uploaded_image);
             } else if (uploadFilter === 'not_uploaded') {
                 filteredData = filteredData.filter(r => !r.uploaded_image);
+            }
+
+            if (approvalFilter === 'approved') {
+                filteredData = filteredData.filter(r => r.participation_status === 'approved');
+            } else if (approvalFilter === 'pending') {
+                filteredData = filteredData.filter(r => r.participation_status !== 'approved');
+            }
+
+            if (majorFilter !== 'all') {
+                filteredData = filteredData.filter(r => r.major === majorFilter);
             }
 
             if (searchVal) {
@@ -2928,7 +2972,10 @@
                 not_participated: { label: 'ไม่เข้าร่วม', color: '#64748b', bg: '#f1f5f9' }
             };
             filteredData.forEach(r => {
-                const s = statusMap[r.status] || statusMap.pending;
+                let s = statusMap[r.status] || statusMap.pending;
+                if (r.participation_status === 'approved') {
+                    s = { label: 'อนุมัติแล้ว (ได้รับคะแนน)', color: '#16a34a', bg: '#f0fdf4' };
+                }
                 const dateStr = r.timestamp ? r.timestamp.split('T')[0] : '-';
                 
                 let uploadHtml = '';
@@ -3113,9 +3160,42 @@
         }
 
         function exportRegCSV() {
-            if (!currentRegData.length) { toast('\u0e44\u0e21\u0e48\u0e21\u0e35\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25', 'warning'); return; }
+            if (!currentRegData.length) { toast('ไม่มีข้อมูล', 'warning'); return; }
+            
+            const uploadFilter = document.getElementById('regs-upload-filter') ? document.getElementById('regs-upload-filter').value : 'all';
+            const approvalFilter = document.getElementById('regs-approval-filter') ? document.getElementById('regs-approval-filter').value : 'all';
+            const majorFilter = document.getElementById('regs-major-filter') ? document.getElementById('regs-major-filter').value : 'all';
+            const searchInput = document.getElementById('regs-search-input');
+            const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+            let filteredData = currentRegData;
+            
+            if (uploadFilter === 'uploaded') {
+                filteredData = filteredData.filter(r => r.uploaded_image);
+            } else if (uploadFilter === 'not_uploaded') {
+                filteredData = filteredData.filter(r => !r.uploaded_image);
+            }
+
+            if (approvalFilter === 'approved') {
+                filteredData = filteredData.filter(r => r.participation_status === 'approved');
+            } else if (approvalFilter === 'pending') {
+                filteredData = filteredData.filter(r => r.participation_status !== 'approved');
+            }
+
+            if (majorFilter !== 'all') {
+                filteredData = filteredData.filter(r => r.major === majorFilter);
+            }
+
+            if (searchVal) {
+                filteredData = filteredData.filter(r => 
+                    r.username.toLowerCase().includes(searchVal) || 
+                    r.name.toLowerCase().includes(searchVal)
+                );
+            }
+
+            if (!filteredData.length) { toast('ไม่มีข้อมูลที่ตรงกับตัวกรอง', 'warning'); return; }
             const BOM = '\uFEFF';
-            const headers = ['\u0e23\u0e2b\u0e31\u0e2a\u0e19\u0e31\u0e01\u0e28\u0e36\u0e01\u0e29\u0e32','\u0e0a\u0e37\u0e48\u0e2d-\u0e19\u0e32\u0e21\u0e2a\u0e01\u0e38\u0e25','\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32','\u0e2d\u0e35\u0e40\u0e21\u0e25','\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e08\u0e2d\u0e07','\u0e01\u0e32\u0e23\u0e2a\u0e48\u0e02\u0e07\u0e32\u0e19','\u0e2a\u0e16\u0e32\u0e19\u0e30'];
+            const headers = ['รหัสนักศึกษา','ชื่อ-นามสกุล','สาขาวิชา','อีเมล','วันที่จอง','การส่งงาน','สถานะ'];
             
             const statusLabels = {
                 confirmed: 'ยืนยันแล้ว',
@@ -3124,23 +3204,29 @@
                 not_participated: 'ไม่เข้าร่วม'
             };
 
-            const rows = currentRegData.map(r => [
-                `"${r.username}"`,
-                `"${r.name}"`,
-                `"${r.major||''}"`,
-                `"${r.email||''}"`,
-                `"${r.timestamp||''}"`,
-                `"${r.uploaded_image ? 'อัปโหลดแล้ว' : 'ยังไม่อัปโหลด'}"`,
-                `"${statusLabels[r.status] || r.status}"`
-            ].join(','));
+            const rows = filteredData.map(r => {
+                let statusText = statusLabels[r.status] || r.status;
+                if (r.participation_status === 'approved') {
+                    statusText = 'อนุมัติแล้ว (ได้รับคะแนน)';
+                }
+                return [
+                    `"${r.username}"`,
+                    `"${r.name}"`,
+                    `"${r.major||''}"`,
+                    `"${r.email||''}"`,
+                    `"${r.timestamp||''}"`,
+                    `"${r.uploaded_image ? 'อัปโหลดแล้ว' : 'ยังไม่อัปโหลด'}"`,
+                    `"${statusText}"`
+                ].join(',');
+            });
             const csv = BOM + [headers.join(','), ...rows].join('\n');
             const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `\u0e23\u0e32\u0e22\u0e0a\u0e37\u0e48\u0e2d\u0e1c\u0e39\u0e49\u0e08\u0e2d\u0e07_${new Date().toLocaleDateString('th-TH').replace(/\//g,'-')}.csv`;
+            a.download = `รายชื่อผู้จอง_${new Date().toLocaleDateString('th-TH').replace(/\//g,'-')}.csv`;
             a.click(); URL.revokeObjectURL(url);
-            toast('Export \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08!', 'success');
+            toast('Export สำเร็จ!', 'success');
         }
 
         // --- Feature: Export CSV ---

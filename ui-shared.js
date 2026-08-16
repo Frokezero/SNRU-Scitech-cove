@@ -89,8 +89,18 @@ window.showLoading = function(show = true) {
     }
 };
 
+// DOM Ready Helper for scripts loaded in <head>
+function onDomReady(fn) {
+    if (document.body && (document.readyState === 'complete' || document.readyState === 'interactive')) {
+        fn();
+    } else {
+        document.addEventListener('DOMContentLoaded', fn);
+    }
+}
+
 // 3. Scroll to Top Utility
-(function setupScrollToTop() {
+onDomReady(function setupScrollToTop() {
+    if (!document.body) return;
     const btn = document.createElement('button');
     btn.id = 'btn-back-to-top';
     btn.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
@@ -112,4 +122,297 @@ window.showLoading = function(show = true) {
     };
 
     btn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-})();
+});
+
+// 4. Floating Web Chatbot Widget (น้องกิจกรรม Scitech AI)
+onDomReady(function setupWebChatbot() {
+    if (window.self !== window.top) return;
+    if (!document.body) return;
+
+    // Prevent duplicate button creation
+    if (document.getElementById('chatbot-toggle-btn')) return;
+
+    // Dynamically inject chatbot.css if not already present
+    if (!document.getElementById('chatbot-stylesheet')) {
+        const link = document.createElement('link');
+        link.id = 'chatbot-stylesheet';
+        link.rel = 'stylesheet';
+        link.href = 'chatbot.css';
+        document.head.appendChild(link);
+    }
+
+    // Create Floating Toggle Button
+    const toggleBtn = document.createElement('button');
+    toggleBtn.id = 'chatbot-toggle-btn';
+    toggleBtn.title = 'คุยกับ น้องกิจกรรม Scitech (AI ผู้ช่วย)';
+    toggleBtn.innerHTML = `
+        <i class="fa-solid fa-robot"></i>
+        <span class="chatbot-badge-dot"></span>
+    `;
+    document.body.appendChild(toggleBtn);
+
+    // Create Chatbot Container
+    const container = document.createElement('div');
+    container.id = 'chatbot-container';
+    container.innerHTML = `
+        <div class="chatbot-header">
+            <div class="chatbot-header-info">
+                <div class="chatbot-avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="chatbot-title-box">
+                    <div class="chatbot-title">น้องกิจกรรม Scitech</div>
+                    <div class="chatbot-status">
+                        <span class="chatbot-status-dot"></span> AI ผู้ช่วยพร้อมตอบคำถาม
+                    </div>
+                </div>
+            </div>
+            <button class="chatbot-close-btn" id="chatbot-close-btn" title="ปิดหน้าต่าง"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="chatbot-messages" id="chatbot-messages-list">
+            <div class="chat-bubble-row bot">
+                <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                <div class="chat-bubble">🤖 สวัสดีครับ! ผมคือ <strong>น้องกิจกรรม Scitech</strong> ผู้ช่วยอัจฉริยะประจำระบบ<br><br>สามารถสอบถามข้อมูลกิจกรรม, ตรวจสอบคะแนนสะสม หรือวิธีลงทะเบียนได้ทันทีครับ!</div>
+            </div>
+        </div>
+        <div class="chatbot-suggestions" id="chatbot-suggestions-chips">
+            <button class="suggestion-chip" data-msg="มีกิจกรรมอะไรบ้าง">📅 กิจกรรมน่าสนใจ</button>
+            <button class="suggestion-chip" data-msg="ฉันขาดอีกกี่คะแนนถึงจะจบ">⭐ เช็คเป้าหมายจบการศึกษา</button>
+            <button class="suggestion-chip" data-msg="วิธีลงทะเบียนเข้าร่วมกิจกรรม">❓ วิธีลงทะเบียน</button>
+        </div>
+        <div class="chatbot-input-area">
+            <input type="text" class="chatbot-input" id="chatbot-input-text" placeholder="พิมพ์คำถามที่นี่..." autocomplete="off">
+            <button class="chatbot-send-btn" id="chatbot-send-action" title="ส่งข้อความ"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    `;
+    document.body.appendChild(container);
+
+    const inputField = document.getElementById('chatbot-input-text');
+    const sendBtn = document.getElementById('chatbot-send-action');
+    const closeBtn = document.getElementById('chatbot-close-btn');
+    const messagesList = document.getElementById('chatbot-messages-list');
+    const suggestionsContainer = document.getElementById('chatbot-suggestions-chips');
+
+    // Toggle Chat Modal
+    toggleBtn.onclick = () => {
+        container.classList.toggle('active');
+        if (container.classList.contains('active')) {
+            inputField.focus();
+            toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
+        } else {
+            toggleBtn.innerHTML = '<i class="fa-solid fa-robot"></i><span class="chatbot-badge-dot"></span>';
+        }
+    };
+
+    closeBtn.onclick = () => {
+        container.classList.remove('active');
+        toggleBtn.innerHTML = '<i class="fa-solid fa-robot"></i><span class="chatbot-badge-dot"></span>';
+    };
+
+    // Mouse Wheel & Drag Horizontal Scroll Helper for Chips
+    function enableHorizontalScroll(elem) {
+        if (!elem) return;
+        elem.addEventListener('wheel', (e) => {
+            if (e.deltaY !== 0) {
+                e.preventDefault();
+                elem.scrollLeft += e.deltaY;
+            }
+        }, { passive: false });
+    }
+
+    enableHorizontalScroll(suggestionsContainer);
+
+    // Quick Suggestion Click Handler
+    suggestionsContainer.onclick = (e) => {
+        const chip = e.target.closest('.suggestion-chip');
+        if (chip) {
+            const text = chip.getAttribute('data-msg');
+            if (text) sendMessage(text);
+        }
+    };
+
+    // Send Message Function
+    async function sendMessage(customText) {
+        const text = (customText || inputField.value).trim();
+        if (!text) return;
+
+        // User Bubble
+        const userRow = document.createElement('div');
+        userRow.className = 'chat-bubble-row user';
+        userRow.innerHTML = `<div class="chat-bubble">${escapeHtml(text)}</div>`;
+        messagesList.appendChild(userRow);
+        
+        if (!customText) inputField.value = '';
+        autoScroll();
+
+        // Typing Indicator
+        const typingRow = document.createElement('div');
+        typingRow.className = 'chat-bubble-row bot';
+        typingRow.id = 'chatbot-typing-temp';
+        typingRow.innerHTML = `
+            <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+            <div class="chat-bubble" style="opacity:0.7;"><i class="fa-solid fa-ellipsis fa-bounce"></i> น้องกิจกรรมกำลังพิมพ์...</div>
+        `;
+        messagesList.appendChild(typingRow);
+        autoScroll();
+
+        try {
+            const response = await fetch('/api/chatbot/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+            
+            typingRow.remove();
+
+            const botRow = document.createElement('div');
+            botRow.className = 'chat-bubble-row bot';
+
+            if (data.success && data.reply) {
+                let formatted = formatMarkdown(data.reply);
+                botRow.innerHTML = `
+                    <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                    <div class="chat-bubble">${formatted}</div>
+                `;
+            } else {
+                botRow.innerHTML = `
+                    <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                    <div class="chat-bubble">⚠️ ขออภัย ไม่สามารถดึงข้อมูลได้ในขณะนี้</div>
+                `;
+            }
+            messagesList.appendChild(botRow);
+
+        } catch (error) {
+            typingRow.remove();
+            const errRow = document.createElement('div');
+            errRow.className = 'chat-bubble-row bot';
+            errRow.innerHTML = `
+                <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                <div class="chat-bubble">❌ เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์</div>
+            `;
+            messagesList.appendChild(errRow);
+        }
+
+        autoScroll();
+    }
+
+    function autoScroll() {
+        messagesList.scrollTop = messagesList.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function formatMarkdown(text) {
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+    }
+
+    sendBtn.onclick = () => sendMessage();
+    inputField.onkeydown = (e) => {
+        if (e.key === 'Enter') sendMessage();
+    };
+
+    // 5. Setup Inline Page Chatbot if present on current page
+    setTimeout(() => {
+        const inlineInput = document.getElementById('inline-chatbot-input');
+        const inlineSendBtn = document.getElementById('inline-chatbot-send');
+        const inlineMessages = document.getElementById('inline-chatbot-messages');
+        const inlineSuggestions = document.getElementById('inline-chatbot-suggestions');
+
+        if (inlineInput && inlineSendBtn && inlineMessages) {
+            async function sendInlineMessage(customText) {
+                const text = (customText || inlineInput.value).trim();
+                if (!text) return;
+
+                const userRow = document.createElement('div');
+                userRow.className = 'chat-bubble-row user';
+                userRow.innerHTML = `<div class="chat-bubble">${escapeHtml(text)}</div>`;
+                inlineMessages.appendChild(userRow);
+                
+                if (!customText) inlineInput.value = '';
+                inlineMessages.scrollTop = inlineMessages.scrollHeight;
+
+                const typingRow = document.createElement('div');
+                typingRow.className = 'chat-bubble-row bot';
+                typingRow.innerHTML = `
+                    <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                    <div class="chat-bubble" style="opacity:0.7;"><i class="fa-solid fa-ellipsis fa-bounce"></i> น้องกิจกรรมกำลังพิมพ์...</div>
+                `;
+                inlineMessages.appendChild(typingRow);
+                inlineMessages.scrollTop = inlineMessages.scrollHeight;
+
+                try {
+                    const response = await fetch('/api/chatbot/ask', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: text })
+                    });
+                    const data = await response.json();
+                    typingRow.remove();
+
+                    const botRow = document.createElement('div');
+                    botRow.className = 'chat-bubble-row bot';
+                    if (data.success && data.reply) {
+                        botRow.innerHTML = `
+                            <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                            <div class="chat-bubble">${formatMarkdown(data.reply)}</div>
+                        `;
+                    } else {
+                        botRow.innerHTML = `
+                            <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                            <div class="chat-bubble">⚠️ ขออภัย ไม่สามารถดึงข้อมูลได้ในขณะนี้</div>
+                        `;
+                    }
+                    inlineMessages.appendChild(botRow);
+                } catch (err) {
+                    typingRow.remove();
+                    const errRow = document.createElement('div');
+                    errRow.className = 'chat-bubble-row bot';
+                    errRow.innerHTML = `
+                        <div class="chatbot-avatar" style="width:30px; height:30px; font-size:14px;"><i class="fa-solid fa-robot"></i></div>
+                        <div class="chat-bubble">❌ เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์</div>
+                    `;
+                    inlineMessages.appendChild(errRow);
+                }
+
+                inlineMessages.scrollTop = inlineMessages.scrollHeight;
+            }
+
+            inlineSendBtn.onclick = () => sendInlineMessage();
+            inlineInput.onkeydown = (e) => {
+                if (e.key === 'Enter') sendInlineMessage();
+            };
+
+            if (inlineSuggestions) {
+                enableHorizontalScroll(inlineSuggestions);
+                inlineSuggestions.onclick = (e) => {
+                    const chip = e.target.closest('.suggestion-chip');
+                    if (chip) {
+                        const msg = chip.getAttribute('data-msg');
+                        if (msg) sendInlineMessage(msg);
+                    }
+                };
+            }
+        }
+    }, 100);
+});
+
+// Navigation Scroll & Toggle Helper
+window.scrollToAiSection = function() {
+    const btn = document.getElementById('chatbot-toggle-btn');
+    const container = document.getElementById('chatbot-container');
+    if (container && !container.classList.contains('active')) {
+        if (btn) btn.click();
+    }
+    const section = document.getElementById('ai-assistant-section');
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+    }
+};
+
+
+

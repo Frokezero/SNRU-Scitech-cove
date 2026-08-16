@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 import os
-load_dotenv() # Load environment variables from .env if present
+# Load environment variables from .env relative to this file's directory
+dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+load_dotenv(dotenv_path)
 
 from flask import Flask, jsonify, request, send_from_directory, session, redirect, send_file, after_this_request
 from flask_session import Session
@@ -73,8 +75,9 @@ def send_email_async(to_email, subject, body):
             
             # 2. Fall back to email_config.json if not in env
             if not sender_email or not sender_password:
-                if os.path.exists('email_config.json'):
-                    with open('email_config.json', 'r', encoding='utf-8') as f:
+                email_cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'email_config.json')
+                if os.path.exists(email_cfg_path):
+                    with open(email_cfg_path, 'r', encoding='utf-8') as f:
                         config = json.load(f)
                     sender_email = config.get("sender_email")
                     sender_password = config.get("sender_password")
@@ -329,22 +332,22 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB upload limit
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-# Redis Shared Session Configuration (Phase 3)
-try:
-    import redis
-    r = redis.from_url('redis://127.0.0.1:6379')
-    r.ping() # Test connection
-    
-    app.config['SESSION_TYPE'] = 'redis'
-    app.config['SESSION_PERMANENT'] = False
-    app.config['SESSION_USE_SIGNER'] = True
-    app.config['SESSION_KEY_PREFIX'] = 'activity_session:'
-    app.config['SESSION_REDIS'] = r
-    
-    server_session = Session(app)
-    print("Redis Session successfully initialized!")
-except Exception as e:
-    print(f"Failed to initialize Redis Session (fallback to default cookie session): {e}")
+# Redis Shared Session Configuration (Disabled for shared hosting compatibility to prevent connection hangs)
+# try:
+#     import redis
+#     r = redis.from_url('redis://127.0.0.1:6379', socket_timeout=1.0, socket_connect_timeout=1.0)
+#     r.ping() # Test connection
+#     
+#     app.config['SESSION_TYPE'] = 'redis'
+#     app.config['SESSION_PERMANENT'] = False
+#     app.config['SESSION_USE_SIGNER'] = True
+#     app.config['SESSION_KEY_PREFIX'] = 'activity_session:'
+#     app.config['SESSION_REDIS'] = r
+#     
+#     server_session = Session(app)
+#     print("Redis Session successfully initialized!")
+# except Exception as e:
+#     print(f"Failed to initialize Redis Session (fallback to default cookie session): {e}")
 
 @app.teardown_appcontext
 def close_db_connections(exception):
@@ -425,7 +428,7 @@ def get_student_year(username):
         pass
     return None
 
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 # Global Session Tracking (for activity timeout only, not concurrency restriction)
 session_lock = threading.RLock()
 ACTIVE_SESSIONS = {} # {username: last_activity_timestamp}
@@ -575,14 +578,16 @@ def db_update_registration_status(reg_id, status):
 
 
 def load_carousel():
-    if not os.path.exists('carousel.json'):
+    carousel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'carousel.json')
+    if not os.path.exists(carousel_path):
         return []
-    with open('carousel.json', 'r', encoding='utf-8') as f:
+    with open(carousel_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 def save_carousel(images):
+    carousel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'carousel.json')
     with data_lock:
-        with open('carousel.json', 'w', encoding='utf-8') as f:
+        with open(carousel_path, 'w', encoding='utf-8') as f:
             json.dump(images, f, ensure_ascii=False, indent=4)
 
 def save_json(filepath, data):
@@ -866,16 +871,17 @@ def cleanup_old_backups():
         print(f"   [BACKUP] Error during cleanup: {e}")
 
 def run_backup_scheduler():
-    # Initial backup on startup
+    # Delay initial backup by 10 seconds to allow smooth startup on shared hosting
+    time.sleep(10)
     perform_system_backup()
     while True:
         # Wait for 24 hours (86400 seconds)
         time.sleep(86400)
         perform_system_backup()
 
-# Start scheduler thread
-backup_thread = threading.Thread(target=run_backup_scheduler, daemon=True)
-backup_thread.start()
+# Start scheduler thread (Disabled on Shared Hosting to save RAM and prevent resource throttling)
+# backup_thread = threading.Thread(target=run_backup_scheduler, daemon=True)
+# backup_thread.start()
 
 # =============================================================
 # AUTOMATED LINE NOTIFICATION SCHEDULER
@@ -1035,10 +1041,49 @@ def run_notification_scheduler():
         # Sleep for 1 hour
         time.sleep(3600)
 
-# Start notification scheduler thread
-notif_thread = threading.Thread(target=run_notification_scheduler, daemon=True)
-notif_thread.start()
+# Start notification scheduler thread (Disabled on Shared Hosting to save RAM and prevent resource throttling)
+# notif_thread = threading.Thread(target=run_notification_scheduler, daemon=True)
+# notif_thread.start()
 
+
+@app.route('/api/test-email')
+def test_email():
+    try:
+        sender_email = os.environ.get("SENDER_EMAIL")
+        sender_password = os.environ.get("SENDER_PASSWORD")
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+        try:
+            smtp_port = int(os.environ.get("SMTP_PORT", 587))
+        except:
+            smtp_port = 587
+            
+        import smtplib
+        from email.mime.text import MIMEText
+        
+        msg = MIMEText("Test email from Activity System", 'plain', 'utf-8')
+        msg['Subject'] = "Test Connection"
+        msg['From'] = sender_email
+        msg['To'] = sender_email
+        
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=5)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        return jsonify({"success": True, "message": f"Email successfully sent from {sender_email} to {sender_email}!"})
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "success": False, 
+            "error_class": e.__class__.__name__,
+            "error_message": str(e),
+            "traceback": traceback.format_exc(),
+            "config": {
+                "sender_email": os.environ.get("SENDER_EMAIL"),
+                "smtp_server": os.environ.get("SMTP_SERVER"),
+                "smtp_port": os.environ.get("SMTP_PORT")
+            }
+        }), 500
 
 # =============================================================
 # MANUAL BACKUP API
@@ -1137,7 +1182,8 @@ def update_activity():
     public_paths = [
         '/', '/login', '/api/login', '/api/register', '/register', '/api/majors', 
         '/api/carousel', '/api/events', '/api/leaderboard', '/theme-loader.js',
-        '/style.css', '/script.js', '/favicon.ico', '/api/line/webhook'
+        '/ui-shared.js', '/style.css', '/script.js', '/favicon.ico', '/api/line/webhook',
+        '/api/chatbot/query', '/api/chatbot/ask', '/chatbot.css'
     ]
     
     if request.path in public_paths or request.path.startswith('/static') or request.path.startswith('/uploads'):
@@ -3085,6 +3131,10 @@ def serve_script():
 @app.route('/style.css')
 def serve_style():
     return send_from_directory('.', 'style.css')
+
+@app.route('/chatbot.css')
+def serve_chatbot_css():
+    return send_from_directory('.', 'chatbot.css')
 
 @app.route('/manual.html')
 def serve_manual():
@@ -5297,18 +5347,451 @@ def line_webhook():
                 elif any(k in user_message_lower for k in ['ช่วย', 'คู่มือ', 'วิธี', 'เมนู', 'help', 'menu', '?', 'h']):
                     reply_line_message(reply_token, get_flex_help())
 
-                # 7. Fallback response for unhandled inputs
+                # 7. Fallback response for unhandled inputs (Gemini AI Integration)
                 else:
-                    fallback_text = (
-                        "🤖 สวัสดีครับ! ผมเป็นบอตปฏิทินกิจกรรมนักศึกษา คณะวิทยาศาสตร์และเทคโนโลยี มรสน.\n\n"
-                        "คำสั่งที่คุณพิมพ์ไม่ถูกต้องหรือยังไม่พร้อมใช้งานในขณะนี้\n\n"
-                        "พิมพ์ **ช่วยเหลือ** หรือ **คะแนน** หรือส่งรหัสกิจกรรมย่อเพื่อจองสิทธิ์ได้ทันทีครับ!"
-                    )
-                    reply_line_message(reply_token, fallback_text)
+                    api_key = os.environ.get("GEMINI_API_KEY")
+                    if api_key:
+                        conn = get_db_connection()
+                        user_row = conn.execute("SELECT * FROM users WHERE line_id = ?", (user_id,)).fetchone()
+                        username = user_row['username'] if user_row else None
+                        conn.close()
+                        
+                        sys_inst = get_chatbot_context(username)
+                        reply_text = ask_gemini(user_message, system_instruction=sys_inst)
+                        reply_line_message(reply_token, reply_text)
+                    else:
+                        fallback_text = (
+                            "🤖 สวัสดีครับ! ผมเป็นบอตปฏิทินกิจกรรมนักศึกษา คณะวิทยาศาสตร์และเทคโนโลยี มรสน.\n\n"
+                            "คำสั่งที่คุณพิมพ์ไม่ถูกต้องหรือยังไม่พร้อมใช้งานในขณะนี้\n\n"
+                            "พิมพ์ **ช่วยเหลือ** หรือ **คะแนน** หรือส่งรหัสกิจกรรมย่อเพื่อจองสิทธิ์ได้ทันทีครับ!"
+                        )
+                        reply_line_message(reply_token, fallback_text)
     except Exception as e:
         print(f"Webhook error: {e}")
         
     return 'OK', 200
+
+def ask_gemini(prompt, system_instruction=None, username=None):
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        # Try primary model gemini-1.5-flash or gemini-2.0-flash
+        for model_name in ["gemini-1.5-flash-latest", "gemini-1.5-pro-latest", "gemini-pro", "gemini-1.5-flash"]:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+                contents = {
+                    "contents": [{"parts": [{"text": prompt}]}]
+                }
+                if system_instruction:
+                    contents["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+                    
+                req_data = json.dumps(contents).encode('utf-8')
+                req = urllib.request.Request(
+                    url, 
+                    data=req_data, 
+                    headers={"Content-Type": "application/json"}, 
+                    method='POST'
+                )
+                
+                with urllib.request.urlopen(req, timeout=8) as response:
+                    res_data = json.loads(response.read().decode('utf-8'))
+                    
+                candidates = res_data.get("candidates", [])
+                if candidates:
+                    content = candidates[0].get("content", {})
+                    parts = content.get("parts", [])
+                    if parts and parts[0].get("text"):
+                        return parts[0].get("text").strip()
+            except Exception as e:
+                print(f"Gemini API ({model_name}) attempt error: {e}")
+                continue
+
+    # Smart Database RAG Fallback if API fails or unavailable
+    return get_smart_fallback_response(prompt, username)
+
+def handle_direct_chat_registration(username, message):
+    if not username:
+        return False, "⚠️ กรุณาเข้าสู่ระบบก่อนทำการลงทะเบียนกิจกรรมครับ"
+        
+    # Extract event title or keyword after registration action word
+    clean_msg = message
+    for kw in ['ลงทะเบียน', 'จอง', 'สมัคร', 'ร่วมงาน']:
+        clean_msg = clean_msg.replace(kw, '')
+    clean_msg = clean_msg.strip()
+    
+    if not clean_msg:
+        return False, "💡 กรุณาระบุชื่อหรือรหัสกิจกรรมที่ต้องการลงทะเบียน เช่น 'ลงทะเบียน กิจกรรมอบรม AI'"
+        
+    conn = get_db_connection()
+    # Search event matching keyword or id
+    event = conn.execute(
+        "SELECT * FROM events WHERE hidden = 0 AND (title LIKE ? OR id = ? OR id LIKE ?) LIMIT 1",
+        (f"%{clean_msg}%", clean_msg, f"{clean_msg}%")
+    ).fetchone()
+    
+    if not event:
+        conn.close()
+        return False, f"🔍 ไม่พบกิจกรรมที่ตรงกับ '{clean_msg}' ในระบบ กรุณาตรวจสอบชื่อกิจกรรมอีกครั้งครับ"
+        
+    event_dict = dict(event)
+    
+    # Check if already registered
+    existing_reg = conn.execute(
+        "SELECT id FROM registrations WHERE username = ? AND event_id = ?",
+        (username, event_dict['id'])
+    ).fetchone()
+    
+    if existing_reg:
+        conn.close()
+        return True, f"✅ คุณได้ลงทะเบียนเข้าร่วมกิจกรรม **'{event_dict['title']}'** เรียบร้อยแล้วครับ!"
+        
+    # Get user details
+    user = conn.execute("SELECT name, major, email FROM users WHERE username = ?", (username,)).fetchone()
+    name = user['name'] if user else username
+    major = user['major'] if user else ''
+    email = user['email'] if user else ''
+    
+    reg_id = str(uuid.uuid4())
+    now_str = datetime.now().isoformat()
+    
+    conn.execute('''
+        INSERT INTO registrations (id, event_id, event_title, event_date, username, name, major, email, timestamp, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    ''', (reg_id, event_dict['id'], event_dict['title'], event_dict['date'], username, name, major, email, now_str))
+    
+    conn.commit()
+    conn.close()
+    
+    return True, (
+        f"🎉 **ลงทะเบียนสำเร็จเรียบร้อยครับ!**\n\n"
+        f"📌 **กิจกรรม:** {event_dict['title']}\n"
+        f"📅 **วันที่:** {event_dict['date']}\n"
+        f"📍 **สถานที่:** {event_dict['location']}\n"
+        f"⭐ **คะแนนที่จะได้รับ:** {event_dict['score']} แต้ม\n\n"
+        f"คุณสามารถตรวจสอบสถานะได้ในหน้าโปรไฟล์ส่วนตัวครับ!"
+    )
+
+def get_graduation_progress_analysis(username):
+    if not username:
+        return "⭐ กรุณาเข้าสู่ระบบเพื่อวิเคราะห์เป้าหมายคะแนนกิจกรรมสะสมของคุณครับ", None
+        
+    conn = get_db_connection()
+    user = conn.execute("SELECT name FROM users WHERE username = ?", (username,)).fetchone()
+    parts = conn.execute("SELECT score FROM participations WHERE username = ? AND status = 'approved'", (username,)).fetchall()
+    total_score = sum(int(x['score'] or 0) for x in parts)
+    
+    target_score = 100 # Standard graduation requirement target
+    remaining = max(0, target_score - total_score)
+    percent = min(100, int((total_score / target_score) * 100))
+    
+    # Progress Bar Text
+    bar_length = 10
+    filled = int(round(bar_length * percent / 100))
+    bar_str = "█" * filled + "░" * (bar_length - filled)
+    
+    msg = (
+        f"📊 **การวิเคราะห์เป้าหมายคะแนนกิจกรรม (คุณ {user['name'] if user else username})**\n\n"
+        f"คะแนนสะสมปัจจุบัน: **{total_score}** / {target_score} คะแนน\n"
+        f"`[{bar_str}]` **{percent}%**\n\n"
+    )
+    
+    if total_score >= target_score:
+        msg += "🎉 **ยินดีด้วยครับ!** คุณสะสมคะแนนกิจกรรมครบตามเกณฑ์การจบการศึกษา (100 คะแนน) เรียบร้อยแล้ว!"
+    else:
+        msg += f"🎯 **ขาดอีกเพียง {remaining} คะแนน** จะครบเกณฑ์จบการศึกษา!\n\n"
+        
+        # Recommend top events with high score
+        high_score_events = conn.execute(
+            "SELECT id, title, date, score, location FROM events WHERE hidden = 0 ORDER BY score DESC LIMIT 3"
+        ).fetchall()
+        
+        if high_score_events:
+            msg += "💡 **กิจกรรมแนะนำสำหรับทำคะแนนเพิ่ม:**\n"
+            for ev in high_score_events:
+                msg += f"• **{ev['title']}** (+{ev['score']} แต้ม | {ev['date']})\n"
+                
+    conn.close()
+    
+    progress_data = {
+        "total": total_score,
+        "target": target_score,
+        "remaining": remaining,
+        "percent": percent
+    }
+    return msg, progress_data
+
+def search_events_in_database(query):
+    conn = get_db_connection()
+    q = query.lower()
+    
+    # Strip common question words
+    clean_q = q
+    for kw in ['วันไหน', 'เมื่อไหร่', 'จัดวันไหน', 'จัดที่ไหน', 'ที่ไหน', 'กี่คะแนน', 'กี่แต้ม', 'ยังไง', 'อย่างไร', 'มีไหม', 'บ้าง', 'จัด', 'วัน']:
+        clean_q = clean_q.replace(kw, '')
+    clean_q = clean_q.strip()
+    
+    # Keyword & Synonym expansion (high priority first)
+    terms = []
+    if 'วิทย์' in q or 'วิทยาศาสตร์' in q:
+        terms.extend(['สัปดาห์วันวิทยาศาสตร์', 'วิทยาศาสตร์'])
+    if 'เปิดโลก' in q:
+        terms.extend(['เปิดโลกกิจกรรม', 'เปิดโลก'])
+    if 'ปฐมนิเทศ' in q:
+        terms.extend(['ปฐมนิเทศ'])
+    if 'ไหว้ครู' in q:
+        terms.extend(['ไหว้ครู'])
+    if 'อบรม' in q:
+        terms.extend(['อบรม'])
+    if 'คอม' in q or 'ไอที' in q:
+        terms.extend(['วิทยาการคอมพิวเตอร์', 'สารสนเทศ'])
+    if 'กีฬา' in q:
+        terms.extend(['กีฬา'])
+        
+    if clean_q and len(clean_q) >= 2 and clean_q not in terms:
+        terms.append(clean_q)
+        
+    events = []
+    seen_ids = set()
+    for term in terms:
+        rows = conn.execute(
+            "SELECT id, title, date, location, score, category, description FROM events WHERE hidden = 0 AND (title LIKE ? OR category LIKE ? OR description LIKE ?) LIMIT 5",
+            (f"%{term}%", f"%{term}%", f"%{term}%")
+        ).fetchall()
+        for r in rows:
+            if r['id'] not in seen_ids:
+                seen_ids.add(r['id'])
+                events.append(dict(r))
+                
+    conn.close()
+    return events[:3]
+
+def get_smart_fallback_response(prompt, username=None):
+    p = prompt.lower()
+    
+    # 1. Direct registration command
+    if any(k in p for k in ['ลงทะเบียน', 'จอง ', 'สมัคร ']):
+        success, msg = handle_direct_chat_registration(username, prompt)
+        return msg
+
+    # 2. Account, Authentication & Password Reset Handling (e.g. "ถ้าลืมรหัส ต้องทำยังไง")
+    if any(k in p for k in ['ลืมรหัส', 'ลืมรหัสผ่าน', 'เปลี่ยนรหัส', 'รีเซ็ตรหัส', 'เข้าไม่ได้', 'รหัสผ่าน', 'สมัครสมาชิก', 'แก้ไขโปรไฟล์', 'เปลี่ยนชื่อ']):
+        return (
+            "🔑 **วิธีแก้ไขปัญหาบัญชีและการเข้าสู่ระบบ:**\n\n"
+            "1. **หากลืมรหัสผ่าน / เปลี่ยนรหัสผ่าน:**\n"
+            "   • หากล็อกอินอยู่ สามารถไปที่หน้า **'โปรไฟล์ของฉัน'** -> กด **'เปลี่ยนรหัสผ่าน'**\n"
+            "   • หากลืมรหัสเข้าใช้งานไม่ได้ กรุณาติดต่อ **แอดมินงานกิจการนักศึกษา คณะวิทยาศาสตร์ฯ** เพื่อขอรีเซ็ตรหัสผ่านชั่วคราวครับ\n\n"
+            "2. **สมัครสมาชิกใหม่ / ลงทะเบียนผู้ใช้:**\n"
+            "   • กดปุ่ม **'เข้าสู่ระบบ / สมัครสมาชิก'** ที่มุมขวาบนของเว็บไซต์ แล้วกรอกรหัสนักศึกษาและตั้งรหัสผ่านใหม่ครับ\n\n"
+            "3. **แก้ไขข้อมูลส่วนตัว (ชื่อ / สาขาวิชา / อีเมล):**\n"
+            "   • แก้ไขได้ทันทีในหน้า **'โปรไฟล์ของฉัน'** ครับ!"
+        )
+
+    # 3. Graduation progress & target points
+    if any(k in p for k in ['จบ', 'ผ่าน', 'เป้าหมาย', 'กี่คะแนน', 'ขาดอีก']):
+        msg, _ = get_graduation_progress_analysis(username)
+        return msg
+
+    # 4. Certificates & Diplomas
+    if any(k in p for k in ['วุฒิบัตร', 'ใบประกาศ', 'ดาวน์โหลด', 'ใบรับรอง', 'เกียรติบัตร']):
+        return (
+            "📜 **ขั้นตอนการดาวน์โหลดวุฒิบัตรเข้าร่วมกิจกรรม:**\n\n"
+            "1. เข้าสู่ระบบแล้วไปที่หน้า **'โปรไฟล์ของฉัน'** (คลิกชื่อของคุณที่เมนูด้านบน)\n"
+            "2. เลื่อนลงมาที่หมวด **'ประวัติกิจกรรมที่เข้าร่วม'**\n"
+            "3. ในกิจกรรมที่มีสถานะ **'อนุมัติแล้ว'** จะมีปุ่ม 📥 **'ดาวน์โหลดวุฒิบัตร'** ปรากฏขึ้นมา สามารถกดบันทึกเป็นไฟล์ PDF ได้ทันทีครับ!"
+        )
+
+    # 5. Check-in & GPS Rules
+    if any(k in p for k in ['เช็คอิน', 'เชคอิน', 'qr', 'gps', 'สแกน', 'เข้างาน']):
+        return (
+            "📍 **ขั้นตอนการเช็คอินเข้าร่วมกิจกรรม:**\n\n"
+            "1. เปิดหน้า **'ระบบเช็คอิน'** ในเว็บไซต์\n"
+            "2. เลือกวิธีเช็คอิน:\n"
+            "   • 📷 **สแกน QR Code:** สแกนป้าย QR Code ที่ผู้จัดงานแสดงไว้หน้างาน\n"
+            "   • 🗺️ **เช็คอินด้วย GPS:** กดปุ่มยืนยันตำแหน่งพิกัดเมื่อเดินทางถึงสถานที่จัดงาน\n"
+            "3. เมื่อเช็คอินสำเร็จ ระบบจะส่งเรื่องให้ผู้จัดงานอนุมัติคะแนนให้ครับ"
+        )
+
+    # 6. Contact Staff & Faculty & Office Hours
+    if any(k in p for k in ['ติดต่อ', 'แอดมิน', 'สโมสร', 'เบอร์โทร', 'เจ้าหน้าที่', 'อาจารย์', 'ห้องสโม', 'กิจการนักศึกษา']):
+        return (
+            "🏢 **ช่องทางการติดต่อ งานกิจการนักศึกษาและสโมสรนักศึกษา:**\n\n"
+            "• **คณะวิทยาศาสตร์และเทคโนโลยี** มหาวิทยาลัยราชภัฏสกลนคร (SNRU Scitech)\n"
+            "• **สถานที่ตั้ง:** อาคารเรียนคณะวิทยาศาสตร์ฯ (อาคาร 10) ชั้น 1\n"
+            "• **สโมสรนักศึกษา:** ห้องกิจกรรมนักศึกษา ชั้น 1 อาคาร 10\n"
+            "• **เวลาทำการ:** จันทร์ - ศุกร์ เวลา 08:30 - 16:30 น.\n"
+            "• **เพจ Facebook:** สโมสรนักศึกษา คณะวิทยาศาสตร์และเทคโนโลยี มรภ.สกลนคร"
+        )
+
+    # 7. LINE Official Account Help
+    if any(k in p for k in ['line', 'ไลน์', 'บอตไลน์', 'โอเอ']):
+        return (
+            "💬 **คำสั่งใช้งานผ่าน LINE Official Account:**\n\n"
+            "• **จองกิจกรรม:** พิมพ์ `จอง [ชื่อกิจกรรม]` หรือ `จอง [รหัสกิจกรรม]`\n"
+            "• **เช็คคะแนน:** พิมพ์ `คะแนน` หรือ `เช็คคะแนน`\n"
+            "• **ยกเลิกการจอง:** พิมพ์ `ยกเลิก reg_[รหัสการจอง]`\n"
+            "• **ขอความช่วยเหลือ:** พิมพ์ `ช่วยเหลือ`"
+        )
+
+    # 8. Greetings & Thanks & Interactive Small Talk
+    if any(k in p for k in ['สวัสดี', 'หวัดดี', 'ดีครับ', 'ดีค่ะ', 'hello', 'hi', 'ขอบคุณ', 'ขอบใจ', 'บาย', 'บ๊าย', 'ใครคือ']):
+        if any(k in p for k in ['ขอบคุณ', 'ขอบใจ']):
+            return "ยินดีรับใช้และช่วยเหลือเสมอครับ! หากมีข้อสงสัยเกี่ยวกับกิจกรรม สามารถสอบถามน้องกิจกรรม Scitech ได้ตลอดเวลาเลยนะครับ 😊🙏"
+        if any(k in p for k in ['บาย', 'บ๊าย']):
+            return "ขอให้มีความสุขกับการเข้าร่วมกิจกรรมนักศึกษานะครับ! บ๊ายบายครับ 👋✨"
+        return (
+            "🤖 **สวัสดีครับ! ผมคือ น้องกิจกรรม Scitech Master ยินดีให้บริการครับ**\n\n"
+            "สามารถสอบถามข้อมูลได้ทุกเรื่อง เช่น:\n"
+            "• **'ถ้าลืมรหัส ต้องทำยังไง'**\n"
+            "• **'วันวิทย์วันไหน'** หรือ **'มีกิจกรรมอะไรบ้าง'**\n"
+            "• **'ดาวน์โหลดวุฒิบัตรยังไง'** หรือ **'วิธีเช็คอินหน้างาน'**\n"
+            "• **'ฉันขาดอีกกี่คะแนนถึงจะจบ'**\n"
+            "• **'ลงทะเบียน [ชื่อกิจกรรม]'** เพื่อจองสิทธิ์ในแชททันที"
+        )
+
+    # 9. Database Search for specific events/topics (e.g. "วันวิทย์วันไหน", "ปฐมนิเทศจัดที่ไหน")
+    db_events = search_events_in_database(prompt)
+    if db_events:
+        msg = f"📅 **ค้นพบ {len(db_events)} กิจกรรมที่เกี่ยวข้องในระบบ:**\n\n"
+        for idx, ev in enumerate(db_events, 1):
+            loc_str = ev['location'] if ev['location'] else 'คณะวิทยาศาสตร์และเทคโนโลยี'
+            msg += f"{idx}. **{ev['title']}**\n"
+            msg += f"   - 📅 **วันที่จัดงาน:** {ev['date']}\n"
+            msg += f"   - 📍 **สถานที่:** {loc_str}\n"
+            msg += f"   - ⭐ **คะแนนที่จะได้รับ:** {ev['score']} แต้ม\n\n"
+        msg += "💡 คุณสามารถพิมพ์ **'ลงทะเบียน [ชื่อกิจกรรม]'** เพื่อจองสิทธิ์ผ่านแชทได้ทันทีครับ!"
+        return msg
+
+    conn = get_db_connection()
+
+    # 10. Specific Major Query
+    majors_keywords = ['คอมพิวเตอร์', 'สารสนเทศ', 'เคมี', 'ชีววิทยา', 'ฟิสิกส์', 'สถิติ', 'สิ่งแวดล้อม', 'อาหาร']
+    if any(k in p for k in majors_keywords):
+        matched_kw = [k for k in majors_keywords if k in p][0]
+        events = conn.execute("SELECT id, title, date, location, score FROM events WHERE hidden = 0 AND (title LIKE ? OR category LIKE ? OR description LIKE ?) LIMIT 5", (f"%{matched_kw}%", f"%{matched_kw}%", f"%{matched_kw}%")).fetchall()
+        conn.close()
+        if events:
+            msg = f"🎓 **กิจกรรมที่เกี่ยวข้องกับสาขา/กลุ่มวิชา '{matched_kw}':**\n\n"
+            for idx, ev in enumerate(events, 1):
+                msg += f"{idx}. **{ev['title']}**\n   - วันที่: {ev['date']} | สถานที่: {ev['location']} (+{ev['score']} แต้ม)\n"
+            msg += "\nพิมพ์ **'ลงทะเบียน [ชื่อกิจกรรม]'** เพื่อจองสิทธิ์ผ่านแชทได้ทันทีครับ!"
+            return msg
+
+    # 11. General Event List
+    if any(k in p for k in ['กิจกรรม', 'มีอะไรบ้าง', 'งาน', ' event', 'ตาราง', 'แนะนำ']):
+        events = conn.execute("SELECT id, title, date, location, score FROM events WHERE hidden = 0 ORDER BY id DESC LIMIT 5").fetchall()
+        conn.close()
+        if events:
+            msg = "📅 **กิจกรรมที่เปิดรับและน่าสนใจในระบบ:**\n\n"
+            for idx, ev in enumerate(events, 1):
+                msg += f"{idx}. **{ev['title']}**\n   - วันที่: {ev['date']}\n   - สถานที่: {ev['location']}\n   - คะแนน: {ev['score']} แต้ม\n\n"
+            msg += "💡 คุณสามารถพิมพ์ **'ลงทะเบียน [ชื่อกิจกรรม]'** เพื่อจองสิทธิ์ผ่านแชทได้ทันทีครับ!"
+            return msg
+
+    # 12. User Score Inquiry
+    if any(k in p for k in ['คะแนน', 'แต้ม', ' score', 'ประวัติ']):
+        if username:
+            user = conn.execute("SELECT name FROM users WHERE username = ?", (username,)).fetchone()
+            parts = conn.execute("SELECT event_title, score FROM participations WHERE username = ? AND status = 'approved'", (username,)).fetchall()
+            total = sum(int(x['score'] or 0) for x in parts)
+            conn.close()
+            msg = f"⭐ **ข้อมูลคะแนนสะสมของคุณ {user['name'] if user else username}**\n\nคะแนนเข้าร่วมกิจกรรมทั้งหมด: **{total}** / 100 คะแนน\n"
+            if parts:
+                msg += "\n**กิจกรรมที่ผ่านการอนุมัติ:**\n" + "\n".join([f"- {x['event_title']} ({x['score']} แต้ม)" for x in parts[:5]])
+            return msg
+        else:
+            conn.close()
+            return "⭐ กรุณาเข้าสู่ระบบเพื่อตรวจสอบคะแนนกิจกรรมสะสมและประวัติการเข้าร่วมของคุณครับ"
+
+    conn.close()
+    return (
+        "🤖 **น้องกิจกรรม Scitech Master พร้อมช่วยเหลือครับ!**\n\n"
+        "คุณสามารถสอบถามได้ทุกเรื่อง เช่น:\n"
+        "• **'ถ้าลืมรหัส ต้องทำยังไง'**\n"
+        "• **'วันวิทย์วันไหน'** หรือ **'มีกิจกรรมอะไรบ้าง'**\n"
+        "• **'ดาวน์โหลดวุฒิบัตรยังไง'** หรือ **'วิธีเช็คอินหน้างาน'**\n"
+        "• **'ติดต่อสโมสรยังไง'**\n"
+        "• **'ฉันขาดอีกกี่คะแนนถึงจะจบ'**\n"
+        "• **'ลงทะเบียน [ชื่อกิจกรรม]'** เพื่อจองสิทธิ์ในแชททันที"
+    )
+
+def get_chatbot_context(username=None):
+    conn = get_db_connection()
+    events = conn.execute("SELECT id, title, date, category, location, score, description FROM events WHERE hidden = 0 ORDER BY id DESC").fetchall()
+    events_list = [dict(e) for e in events]
+    
+    user_info = ""
+    if username:
+        user = conn.execute("SELECT name, email, major, role FROM users WHERE username = ?", (username,)).fetchone()
+        if user:
+            user = dict(user)
+            parts = conn.execute("SELECT event_title, score FROM participations WHERE username = ? AND status = 'approved'", (username,)).fetchall()
+            total_score = sum(int(p['score'] or 0) for p in parts)
+            approved_titles = ", ".join([p['event_title'] for p in parts[:5]]) or "ยังไม่มี"
+            user_info = (
+                f"\n\n[ข้อมูลนักศึกษาปัจจุบันที่กำลังคุยอยู่]\n"
+                f"- ชื่อ: คุณ{user['name']}\n"
+                f"- รหัสนักศึกษา/Username: {username}\n"
+                f"- สาขาวิชา: {user['major']}\n"
+                f"- คะแนนสะสมอนุมัติแล้ว: {total_score} คะแนน (จากเป้าหมายจบการศึกษา 100 คะแนน)\n"
+                f"- กิจกรรมที่ผ่านอนุมัติแล้ว: {approved_titles}"
+            )
+            
+    conn.close()
+    
+    events_str = ""
+    for idx, ev in enumerate(events_list[:30]):
+        events_str += f"\n{idx+1}. [{ev['title']}] วันที่: {ev['date']} | ประเภท: {ev['category']} | สถานที่: {ev['location']} | คะแนน: {ev['score']} แต้ม | รหัส: {ev['id'][:8]}"
+        
+    system_instruction = (
+        "คุณคือ 'น้องกิจกรรม Scitech Expert' AI ผู้ช่วยอัจฉริยะประจำระบบกิจกรรมนักศึกษา คณะวิทยาศาสตร์และเทคโนโลยี มหาวิทยาลัยราชภัฏสกลนคร (SNRU Scitech)\n\n"
+        "=== กฎและคู่มือการตอบคำถามสำคัญ ===\n"
+        "1. ตอบคำถามอย่างสุภาพ อบอุ่น เป็นกันเอง ชัดเจน มีโครงสร้างอ่านง่าย มีไอคอน ใช้คำลงท้ายว่า 'ครับ' หรือ 'ค่ะ'\n"
+        "2. ตอบตรงคำถามโดยอิงจากข้อเท็จจริงในคลังข้อมูลนี้เท่านั้น ห้ามสร้างข้อมูลเท็จเด็ดขาด\n"
+        "3. การดาวน์โหลดวุฒิบัตร: แนะนำให้เข้าหน้า 'โปรไฟล์ของฉัน' -> ดูหมวดประวัติกิจกรรมที่ผ่านการอนุมัติ -> กดปุ่ม 'ดาวน์โหลดวุฒิบัตร PDF'\n"
+        "4. การเช็คอิน: แนะนำให้เข้าหน้า 'ระบบเช็คอิน' -> สแกน QR Code หน้างาน หรือกดเช็คอินผ่าน GPS พิกัดสถานที่จัดงาน\n"
+        "5. การใช้งานใน LINE OA: แนะนำพิมพ์ 'จอง [ชื่อกิจกรรม]' หรือ 'จอง [รหัสกิจกรรม]' หรือพิมพ์ 'คะแนน'\n"
+        "6. เกณฑ์จบการศึกษา: นักศึกษาต้องสะสมคะแนนกิจกรรมให้ครบอย่างน้อย 100 คะแนน\n"
+        "7. การจองผ่านแชทนี้: นักศึกษาสามารถพิมพ์ 'ลงทะเบียน [ชื่อกิจกรรม]' เพื่อให้คุณทำเรื่องจองสิทธิ์ในแชทนี้ได้เลย\n\n"
+        f"=== รายการกิจกรรมในระบบทั้งหมด ({len(events_list)} กิจกรรม) ==="
+        f"{events_str}"
+        f"{user_info}"
+    )
+    return system_instruction
+
+@app.route('/api/chatbot/ask', methods=['POST'])
+@app.route('/api/chatbot/query', methods=['POST'])
+def chatbot_query():
+    data = request.json or {}
+    user_message = data.get('message', '').strip()
+    
+    if not user_message:
+        return jsonify({"success": False, "message": "กรุณากรอกข้อความ"}), 400
+        
+    username = session.get('username')
+    
+    # Direct Chat Commands Router
+    p = user_message.lower()
+    if any(k in p for k in ['ลงทะเบียน', 'จอง ', 'สมัคร ']):
+        success, reply_text = handle_direct_chat_registration(username, user_message)
+        return jsonify({"success": True, "reply": reply_text})
+        
+    if any(k in p for k in ['ขาดอีก', 'ถึงจะจบ', 'เป้าหมาย', 'กี่คะแนน']):
+        reply_text, progress = get_graduation_progress_analysis(username)
+        return jsonify({"success": True, "reply": reply_text, "progress": progress})
+
+    sys_inst = get_chatbot_context(username)
+    reply_text = ask_gemini(user_message, system_instruction=sys_inst, username=username)
+    
+    suggestions = [
+        "📅 กิจกรรมน่าสนใจสัปดาห์นี้",
+        "⭐ ฉันขาดอีกกี่คะแนนถึงจะจบ",
+        "❓ ดาวน์โหลดวุฒิบัตรยังไง"
+    ]
+    
+    return jsonify({
+        "success": True, 
+        "reply": reply_text,
+        "suggestions": suggestions
+    })
 
 # =============================================================
 
