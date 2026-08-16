@@ -27,6 +27,8 @@ import hmac
 import hashlib
 import base64
 import math
+import random
+import string
 
 # Simple Cache for Performance
 _cache = {
@@ -1186,8 +1188,13 @@ def update_activity():
         '/api/chatbot/query', '/api/chatbot/ask', '/chatbot.css'
     ]
     
-    if request.path in public_paths or request.path.startswith('/static') or request.path.startswith('/uploads'):
+    if (request.path in public_paths or 
+        request.path.startswith('/api/auth/') or 
+        request.path == '/reset-password' or 
+        request.path.startswith('/static') or 
+        request.path.startswith('/uploads')):
         return
+
 
     # 2. Session Update: If logged in, update last activity
     username = session.get('username')
@@ -1324,9 +1331,233 @@ def change_password():
         db_save_user(username, users[username])
     return jsonify({"success": True, "message": "เปลี่ยนรหัสผ่านสำเร็จ"})
 
+# OTP Management for Forgot Password System
+OTP_FILE = 'otp_store.json'
+
+def load_otp_store():
+    with data_lock:
+        if not os.path.exists(OTP_FILE):
+            return {}
+        try:
+            with open(OTP_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
+def save_otp_store(store):
+    with data_lock:
+        try:
+            with open(OTP_FILE, 'w', encoding='utf-8') as f:
+                json.dump(store, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Error saving OTP store: {e}")
+
+def mask_email(email):
+    if not email or '@' not in email:
+        return email or ""
+    parts = email.split('@')
+    name = parts[0]
+    domain = parts[1]
+    if len(name) <= 2:
+        masked_name = name[0] + "*"
+    else:
+        masked_name = name[0] + "*" * (len(name) - 2) + name[-1]
+    return f"{masked_name}@{domain}"
+
+def generate_otp_code():
+    return "".join(random.choices(string.digits, k=6))
+
+def generate_ref_code():
+    return "REF-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
+
+@app.route('/api/auth/forgot-password/check-user', methods=['POST'])
+def forgot_password_check_user():
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    if not username:
+        return jsonify({"success": False, "message": "กรุณาระบุรหัสนักศึกษาหรือชื่อผู้ใช้งาน"}), 400
+
+    user = db_get_user(username)
+    if not user:
+        return jsonify({"success": False, "message": "ไม่พบรหัสนักศึกษาหรือชื่อผู้ใช้งานนี้ในระบบ"}), 404
+
+    user_email = (user.get('email') or '').strip()
+    
+    if user_email and '@' in user_email:
+        # User has an email linked
+        otp = generate_otp_code()
+        ref_code = generate_ref_code()
+        expiry = time.time() + (10 * 60) # 10 minutes
+
+        otp_store = load_otp_store()
+        otp_store[username] = {
+            "username": username,
+            "email": user_email,
+            "otp": otp,
+            "ref_code": ref_code,
+            "expiry": expiry,
+            "type": "reset",
+            "attempts": 0
+        }
+        save_otp_store(otp_store)
+
+        # Send OTP Email
+        subject = f"🔒 รหัส OTP สำหรับรีเซ็ตรหัสผ่าน [{ref_code}]"
+        content_html = f"""
+        <p style="font-size: 16px; margin-top: 0;">สวัสดีคุณ <strong>{user.get('name', username)}</strong>,</p>
+        <p style="font-size: 15px; color: #334155;">คุณได้ทำรายการขอรีเซ็ตรหัสผ่านสำหรับระบบปฏิทินกิจกรรมนักศึกษา</p>
+        <div style="background: #f8fafc; border: 2px dashed #0284c7; border-radius: 16px; padding: 20px; text-align: center; margin: 25px 0;">
+            <p style="font-size: 13px; color: #64748b; margin: 0 0 8px 0; font-weight: 600;">รหัสอ้างอิง (Ref Code): <span style="color: #0284c7;">{ref_code}</span></p>
+            <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #0284c7; margin: 10px 0;">{otp}</div>
+            <p style="font-size: 12px; color: #ef4444; margin: 8px 0 0 0;">* รหัส OTP นี้มีอายุการใช้งาน 10 นาที *</p>
+        </div>
+        <p style="font-size: 13px; color: #94a3b8;">หากท่านไม่ได้ทำรายการขอเปลี่ยนรหัสผ่าน โปรดละเลยอีเมลฉบับนี้</p>
+        """
+        body = get_premium_email_html(
+            title="🔑 รหัส OTP รีเซ็ตรหัสผ่าน",
+            content_html=content_html,
+            type_color="#0284c7"
+        )
+        send_email_async(user_email, subject, body)
+
+        return jsonify({
+            "success": True,
+            "has_email": True,
+            "username": username,
+            "email_masked": mask_email(user_email),
+            "ref_code": ref_code,
+            "message": f"ส่งรหัส OTP ไปยัง {mask_email(user_email)} เรียบร้อยแล้ว"
+        })
+    else:
+        # User does NOT have an email linked
+        return jsonify({
+            "success": True,
+            "has_email": False,
+            "username": username,
+            "message": "บัญชีของคุณยังไม่ได้เชื่อมต่ออีเมล กรุณาระบุอีเมลเพื่อรับรหัส OTP"
+        })
+
+@app.route('/api/auth/forgot-password/send-otp-link-email', methods=['POST'])
+def forgot_password_send_otp_link_email():
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    email = (data.get('email') or '').strip()
+
+    if not username or not email:
+        return jsonify({"success": False, "message": "กรุณาระบุข้อมูลให้ครบถ้วน"}), 400
+
+    if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email):
+        return jsonify({"success": False, "message": "รูปแบบอีเมลไม่ถูกต้อง"}), 400
+
+    user = db_get_user(username)
+    if not user:
+        return jsonify({"success": False, "message": "ไม่พบผู้ใช้งานนี้ในระบบ"}), 404
+
+    otp = generate_otp_code()
+    ref_code = generate_ref_code()
+    expiry = time.time() + (10 * 60) # 10 mins
+
+    otp_store = load_otp_store()
+    otp_store[username] = {
+        "username": username,
+        "email": email,
+        "otp": otp,
+        "ref_code": ref_code,
+        "expiry": expiry,
+        "type": "link_and_reset",
+        "attempts": 0
+    }
+    save_otp_store(otp_store)
+
+    # Send OTP Email
+    subject = f"🔒 รหัส OTP สำหรับเชื่อมต่ออีเมลและเปลี่ยนรหัสผ่าน [{ref_code}]"
+    content_html = f"""
+    <p style="font-size: 16px; margin-top: 0;">สวัสดีคุณ <strong>{user.get('name', username)}</strong>,</p>
+    <p style="font-size: 15px; color: #334155;">คุณได้ทำรายการขอเชื่อมต่ออีเมลกับบัญชีผู้ใช้ ({username}) เพื่อตั้งรหัสผ่านใหม่</p>
+    <div style="background: #f8fafc; border: 2px dashed #16a34a; border-radius: 16px; padding: 20px; text-align: center; margin: 25px 0;">
+        <p style="font-size: 13px; color: #64748b; margin: 0 0 8px 0; font-weight: 600;">รหัสอ้างอิง (Ref Code): <span style="color: #16a34a;">{ref_code}</span></p>
+        <div style="font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #16a34a; margin: 10px 0;">{otp}</div>
+        <p style="font-size: 12px; color: #ef4444; margin: 8px 0 0 0;">* รหัส OTP นี้มีอายุการใช้งาน 10 นาที *</p>
+    </div>
+    <p style="font-size: 13px; color: #94a3b8;">หากยื่นคำขอนี้สำเร็จ อีเมลนี้จะถูกบันทึกเชื่อมต่อกับบัญชีของคุณโดยอัตโนมัติ</p>
+    """
+    body = get_premium_email_html(
+        title="✉️ รหัส OTP สำหรับเชื่อมต่ออีเมล",
+        content_html=content_html,
+        type_color="#16a34a"
+    )
+    send_email_async(email, subject, body)
+
+    return jsonify({
+        "success": True,
+        "email_masked": mask_email(email),
+        "ref_code": ref_code,
+        "message": f"ส่งรหัส OTP ไปยัง {mask_email(email)} เรียบร้อยแล้ว"
+    })
+
+@app.route('/api/auth/forgot-password/verify-otp', methods=['POST'])
+def forgot_password_verify_otp():
+    data = request.json or {}
+    username = (data.get('username') or '').strip()
+    user_otp = (data.get('otp') or '').strip()
+
+    if not username or not user_otp:
+        return jsonify({"success": False, "message": "กรุณากรอกรหัส OTP ให้ครบถ้วน"}), 400
+
+    otp_store = load_otp_store()
+    record = otp_store.get(username)
+
+    if not record:
+        return jsonify({"success": False, "message": "ไม่พบรายการ OTP หรือรหัส OTP หมดอายุแล้ว"}), 400
+
+    if time.time() > record.get('expiry', 0):
+        del otp_store[username]
+        save_otp_store(otp_store)
+        return jsonify({"success": False, "message": "รหัส OTP หมดอายุแล้ว กรุณาขอรหัสใหม่"}), 400
+
+    if record.get('otp') != user_otp:
+        record['attempts'] = record.get('attempts', 0) + 1
+        save_otp_store(otp_store)
+        if record['attempts'] >= 5:
+            del otp_store[username]
+            save_otp_store(otp_store)
+            return jsonify({"success": False, "message": "กรอก OTP ผิดเกิน 5 ครั้ง กรุณาขอรหัส OTP ใหม่"}), 400
+        return jsonify({"success": False, "message": "รหัส OTP ไม่ถูกต้อง"}), 400
+
+    # OTP Verified!
+    user = db_get_user(username)
+    if not user:
+        return jsonify({"success": False, "message": "ไม่พบผู้ใช้งาน"}), 404
+
+    # If it was link_and_reset type, save email to user record in DB now
+    if record.get('type') == 'link_and_reset' and record.get('email'):
+        user['email'] = record['email']
+        db_save_user(username, user)
+
+    # Clean up OTP record
+    del otp_store[username]
+    save_otp_store(otp_store)
+
+    # Generate Reset Token for final password update step
+    token = uuid.uuid4().hex
+    tokens = load_tokens()
+    tokens[token] = {
+        "username": username,
+        "expiry": time.time() + (15 * 60) # 15 minutes
+    }
+    save_tokens(tokens)
+
+    return jsonify({
+        "success": True,
+        "reset_token": token,
+        "message": "ยืนยันรหัส OTP สำเร็จแล้ว"
+    })
+
 @app.route('/api/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    email = request.json.get('email')
+    # Backward compatibility with existing email-based request if any
+    data = request.json or {}
+    email = data.get('email')
     if not email:
         return jsonify({"success": False, "message": "กรุณาระบุอีเมล"}), 400
         
@@ -1343,23 +1574,20 @@ def forgot_password():
         if not user_target:
             return jsonify({"success": False, "message": "ไม่พบอีเมลนี้ในระบบ"}), 404
             
-        # Generate Token
         token = uuid.uuid4().hex
         tokens = load_tokens()
         tokens[token] = {
             "username": username_target,
-            "expiry": time.time() + (15 * 60) # 15 mins
+            "expiry": time.time() + (15 * 60)
         }
         save_tokens(tokens)
     
-    # Send Email
     subject = "แจ้งเปลี่ยนรหัสผ่านใหม่ (Reset Password)"
     reset_link = f"{request.host_url}reset-password?token={token}"
     content_html = f"""
     <p style="font-size: 16px; margin-top: 0;">สวัสดีคุณ <strong>{user_target.get('name', username_target)}</strong>,</p>
     <p style="font-size: 15px; color: #334155;">เราได้รับคำร้องขอตั้งค่ารหัสผ่านใหม่สำหรับบัญชีผู้ใช้ระบบปฏิทินกิจกรรมของคุณ</p>
     <p style="font-size: 15px; color: #334155;">กรุณาคลิกปุ่มด้านล่างเพื่อดำเนินการเปลี่ยนรหัสผ่านใหม่ โดยลิงก์ความปลอดภัยนี้จะมีอายุการใช้งาน 15 นาที</p>
-    <p style="font-size: 13px; color: #94a3b8; margin-top: 20px; border-top: 1px dashed #e2e8f0; padding-top: 15px;">* หากท่านไม่ได้ทำรายการส่งคำร้องนี้ กรุณาปล่อยผ่านและละเลยอีเมลฉบับนี้ได้ทันที</p>
     """
     body = get_premium_email_html(
         title="🔒 คำขอเปลี่ยนรหัสผ่าน",
@@ -1373,7 +1601,7 @@ def forgot_password():
 
 @app.route('/api/auth/reset-password', methods=['POST'])
 def reset_password():
-    data = request.json
+    data = request.json or {}
     token = data.get('token')
     new_pw = data.get('newPassword')
     
@@ -1386,22 +1614,22 @@ def reset_password():
             return jsonify({"success": False, "message": "Token ไม่ถูกต้องหรือหมดอายุ"}), 400
             
         token_data = tokens[token]
-        if time.time() > token_data['expiry']:
+        if time.time() > token_data.get('expiry', 0):
             del tokens[token]
             save_tokens(tokens)
             return jsonify({"success": False, "message": "Token หมดอายุแล้ว"}), 400
             
         username = token_data['username']
-        users = load_users()
-        if username in users:
-            users[username]['password'] = generate_password_hash(new_pw)
-            db_save_user(username, users[username])
+        user = db_get_user(username)
+        if user:
+            user['password'] = generate_password_hash(new_pw)
+            db_save_user(username, user)
             
-        # Clean up token
         del tokens[token]
         save_tokens(tokens)
     
     return jsonify({"success": True, "message": "เปลี่ยนรหัสผ่านใหม่สำเร็จแล้ว"})
+
 
 @app.route('/api/register', methods=['POST'])
 def register():
