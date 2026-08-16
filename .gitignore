@@ -196,7 +196,9 @@ database.db-shm
 # User data JSON files (legacy, may contain passwords/info)
 users.json
 reset_tokens.json
+otp_store.json
 sent_event_notifications.json
+
 
 # Backup folder (contains copies of sensitive data)
 backups/
